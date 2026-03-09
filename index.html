@@ -351,7 +351,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
         }
 
@@ -1476,12 +1476,6 @@
                     <i class="mdi mdi-lock"></i>
                 </button>
             </div>
-            
-            <div class="icon-stack">
-                <button class="theme-toggle" id="exportBtn" aria-label="Export data">
-                    <i class="mdi mdi-download"></i>
-                </button>
-            </div>
         </div>
     </div>
     
@@ -1665,10 +1659,10 @@
     </div>
     
     <!-- GitHub Token Modal -->
-    <div class="modal-overlay" id="tokenModal" role="dialog" aria-modal="true" aria-labelledby="tokenModalTitle">
+    <div class="modal-overlay" id="tokenModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="tokenModalTitle"><i class="mdi mdi-github"></i> GitHub Token Setup</h2>
+                <h2><i class="mdi mdi-github"></i> GitHub Token Setup</h2>
                 <button class="close-panel" id="closeTokenModal">
                     <i class="mdi mdi-close"></i>
                 </button>
@@ -1698,10 +1692,10 @@
     </div>
 
     <!-- PIN Modal -->
-    <div class="modal-overlay" id="pinModal" role="dialog" aria-modal="true" aria-labelledby="pinModalTitle">
+    <div class="modal-overlay" id="pinModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="pinModalTitle"><i class="mdi mdi-lock"></i> Enter Admin PIN</h2>
+                <h2><i class="mdi mdi-lock"></i> Enter Admin PIN</h2>
                 <button class="close-panel" id="closePinModal">
                     <i class="mdi mdi-close"></i>
                 </button>
@@ -1730,7 +1724,7 @@
     </div>
     
     <!-- Equipment Form Modal -->
-    <div class="modal-overlay" id="equipmentModal" role="dialog" aria-modal="true" aria-labelledby="equipmentModalTitle">
+    <div class="modal-overlay" id="equipmentModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="equipmentModalTitle"><i class="mdi mdi-plus-circle"></i> Add New Equipment</h2>
@@ -1800,7 +1794,7 @@
     </div>
     
     <!-- Maintenance Form Modal -->
-    <div class="modal-overlay" id="maintenanceModal" role="dialog" aria-modal="true" aria-labelledby="maintenanceModalTitle">
+    <div class="modal-overlay" id="maintenanceModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="maintenanceModalTitle"><i class="mdi mdi-wrench"></i> Add Maintenance Record</h2>
@@ -1856,10 +1850,10 @@
     </div>
     
     <!-- Delete Confirmation Modal -->
-    <div class="modal-overlay" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-overlay" id="deleteModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="deleteModalTitle"><i class="mdi mdi-delete-alert"></i> Confirm Deletion</h2>
+                <h2><i class="mdi mdi-delete-alert"></i> Confirm Deletion</h2>
                 <button class="close-panel" id="closeDeleteModal">
                     <i class="mdi mdi-close"></i>
                 </button>
@@ -1871,38 +1865,6 @@
             <div class="modal-footer">
                 <button class="btn btn-outline" id="cancelDeleteBtn">Cancel</button>
                 <button class="btn btn-danger" id="confirmDeleteBtn">Delete Equipment</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Change PIN Modal -->
-    <div class="modal-overlay" id="changePinModal" role="dialog" aria-modal="true" aria-labelledby="changePinModalTitle">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="changePinModalTitle"><i class="mdi mdi-lock"></i> Change Admin PIN</h2>
-                <button class="close-panel" id="closeChangePinModal">
-                    <i class="mdi mdi-close"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="newPinInput">Enter new 4-digit PIN:</label>
-                    <input type="password" class="pin-input" id="newPinInput" maxlength="4" readonly>
-                </div>
-                <div class="pin-grid">
-                    <button class="pin-btn" data-value="1">1</button>
-                    <button class="pin-btn" data-value="2">2</button>
-                    <button class="pin-btn" data-value="3">3</button>
-                    <button class="pin-btn" data-value="4">4</button>
-                    <button class="pin-btn" data-value="5">5</button>
-                    <button class="pin-btn" data-value="6">6</button>
-                    <button class="pin-btn" data-value="7">7</button>
-                    <button class="pin-btn" data-value="8">8</button>
-                    <button class="pin-btn" data-value="9">9</button>
-                    <button class="pin-btn" id="newPinBackspace"><i class="mdi mdi-backspace"></i></button>
-                    <button class="pin-btn" data-value="0">0</button>
-                    <button class="pin-btn" id="newPinEnter"><i class="mdi mdi-check"></i></button>
-                </div>
             </div>
         </div>
     </div>
@@ -1953,6 +1915,7 @@
         // Current selected equipment
         let selectedEquipment = null;
         let adminMode = false;
+        const ADMIN_PIN = "1234";
 
         // Cache for filtered equipment
         let cachedFilteredEquipment = [];
@@ -1967,10 +1930,6 @@
         let savingTimer = null;
         let savingProgressInterval = null;
         let savingIndicatorStartTime = 0;
-
-        // Pagination
-        let currentPage = 1;
-        const itemsPerPage = 20;
 
         // DOM Elements
         const equipmentGrid = document.getElementById('equipmentGrid');
@@ -2017,14 +1976,6 @@
         const pinBackspace = document.getElementById('pinBackspace');
         const pinEnter = document.getElementById('pinEnter');
         const pinBtns = document.querySelectorAll('.pin-btn[data-value]');
-
-        // Change PIN modal elements
-        const changePinModal = document.getElementById('changePinModal');
-        const newPinInput = document.getElementById('newPinInput');
-        const closeChangePinModal = document.getElementById('closeChangePinModal');
-        const newPinBackspace = document.getElementById('newPinBackspace');
-        const newPinEnter = document.getElementById('newPinEnter');
-        const newPinBtns = document.querySelectorAll('#changePinModal .pin-btn[data-value]');
 
         // Equipment modal elements
         const equipmentModal = document.getElementById('equipmentModal');
@@ -2079,500 +2030,349 @@
         // Initialize GitHub token
         let GITHUB_PAT = localStorage.getItem('github_pat') || '';
 
-        // PIN Hashing
-        function hashPin(pin) {
-            let hash = 0;
-            for (let i = 0; i < pin.length; i++) {
-                hash = (hash << 5) - hash + pin.charCodeAt(i);
-                hash |= 0;
-            }
-            return hash.toString();
+        // Helper functions
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
         }
 
-        let ADMIN_PIN_HASH = localStorage.getItem('admin_pin_hash') || hashPin('1234'); // Default '1234'
-
-        // DataManager Object
-        const DataManager = {
-            async fetchRemoteData() {
-                if (!GITHUB_PAT) {
-                    throw new Error('No GitHub token configured');
-                }
-
-                try {
-                    const metaResponse = await fetch(
-                        `\( {GITHUB_API}/repos/ \){GITHUB_USER}/\( {GITHUB_REPO}/contents/ \){DATA_PATH}`,
-                        { headers: { "Authorization": `Bearer ${GITHUB_PAT}` } }
-                    );
-
-                    if (!metaResponse.ok) {
-                        const errorData = await metaResponse.json();
-                        throw new Error(`GitHub API error: ${errorData.message}`);
-                    }
-                    
-                    const fileInfo = await metaResponse.json();
-                    const content = atob(fileInfo.content);
-                    const remoteData = JSON.parse(content);
-                    
-                    return {
-                        equipment: remoteData.equipment || [],
-                        timestamp: remoteData.timestamp || 0,
-                        sha: fileInfo.sha
-                    };
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                    throw new Error('Failed to fetch data: ' + error.message);
-                }
-            },
-
-            async pushDataToGitHub() {
-                if (!GITHUB_PAT) {
-                    UIManager.updateSyncStatus('error', 'No GitHub token');
-                    return false;
-                }
-
-                const content = JSON.stringify({
-                    equipment: equipmentData,
-                    timestamp: Date.now()
-                }, null, 2);
-
-                try {
-                    const bodyData = {
-                        message: "Update equipment data",
-                        content: btoa(unescape(encodeURIComponent(content))),
-                        branch: "main"
-                    };
-
-                    if (fileSHA) bodyData.sha = fileSHA;
-
-                    const response = await fetch(
-                        `\( {GITHUB_API}/repos/ \){GITHUB_USER}/\( {GITHUB_REPO}/contents/ \){DATA_PATH}`,
-                        {
-                            method: "PUT",
-                            headers: {
-                                "Authorization": `Bearer ${GITHUB_PAT}`,
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify(bodyData)
-                        }
-                    );
-
-                    const result = await response.json();
-                    if (response.ok && result.content) {
-                        fileSHA = result.content.sha;
-                        lastSyncTimestamp = Date.now();
-                        return true;
-                    } else {
-                        console.error('GitHub API error:', result);
-                        throw new Error(result.message || 'Failed to push data');
-                    }
-                } catch (error) {
-                    console.error('Push error:', error);
-                    if (error.message.includes('409')) {
-                        const remoteData = await this.fetchRemoteData();
-                        fileSHA = remoteData.sha;
-                        return await this.pushDataToGitHub(); // Retry
-                    }
-                    throw error;
-                }
-            },
-
-            async saveChanges() {
-                if (!GITHUB_PAT) {
-                    UIManager.showTokenModal();
-                    return false;
-                }
-
-                if (!navigator.onLine) {
-                    UIManager.showToast('Offline - cannot save', 'mdi-alert');
-                    return false;
-                }
-
-                UIManager.showSavingIndicator();
-                
-                syncStatusBar.classList.add('active');
-                syncMessage.textContent = "Saving changes to SHB Server...";
-                progressBar.style.width = '0%';
-                UIManager.updateSyncStatus('syncing', 'Saving changes...');
-                
-                try {
-                    let progress = 0;
-                    const progressInterval = setInterval(() => {
-                        progress += 10;
-                        progressBar.style.width = `${progress}%`;
-                        if (progress >= 90) clearInterval(progressInterval);
-                    }, 200);
-                    
-                    const success = await this.pushDataToGitHub();
-                    
-                    clearInterval(progressInterval);
-                    progressBar.style.width = '100%';
-                    
-                    if (success) {
-                        UIManager.updateSyncStatus('synced', `Saved at ${new Date().toLocaleTimeString()}`);
-                        syncMessage.textContent = "Changes saved successfully!";
-                        setTimeout(() => {
-                            syncStatusBar.classList.remove('active');
-                            progressBar.style.width = '0%';
-                        }, 2000);
-                        
-                        setTimeout(this.syncData, 5000);
-                        return true;
-                    } else {
-                        UIManager.updateSyncStatus('error', 'Save failed!');
-                        syncMessage.textContent = "Failed to save changes. Please check your token.";
-                        return false;
-                    }
-                } catch (error) {
-                    console.error('Save error:', error);
-                    UIManager.updateSyncStatus('error', 'Save error: ' + error.message);
-                    syncMessage.textContent = "Error: " + error.message;
-                    return false;
-                } finally {
-                    UIManager.hideSavingIndicator();
-                }
-            },
-
-            async syncData(force = false) {
-                if (syncInProgress || !GITHUB_PAT) return;
-                
-                if (!navigator.onLine) {
-                    UIManager.showToast('Offline - cannot sync', 'mdi-alert');
-                    return;
-                }
-                
-                syncInProgress = true;
-                UIManager.updateSyncStatus('syncing', 'Syncing...');
-                loadingOverlay.classList.add('active');
-                
-                try {
-                    const remote = await this.fetchRemoteData();
-                    
-                    cachedFilteredEquipment = [];
-                    
-                    if (force || remote.timestamp > lastSyncTimestamp) {
-                        const mergedEquipment = this.mergeEquipmentData(equipmentData, remote.equipment);
-                        
-                        equipmentData = mergedEquipment;
-                        fileSHA = remote.sha;
-                        lastSyncTimestamp = remote.timestamp;
-                        
-                        UIManager.showToast('Data synced successfully', 'mdi-cloud-check');
-                    } else {
-                        UIManager.showToast('Data is up to date', 'mdi-cloud-check');
-                    }
-                    
-                    UIManager.updateSyncStatus('synced', `Synced at ${new Date().toLocaleTimeString()}`);
-                } catch (error) {
-                    console.error('Sync error:', error);
-                    if (error.message.includes('404')) {
-                        equipmentData = [];
-                        cachedFilteredEquipment = [];
-                        const pushSuccess = await this.pushDataToGitHub();
-                        if (pushSuccess) {
-                            UIManager.updateSyncStatus('synced', 'Initialized new data file');
-                        } else {
-                            UIManager.updateSyncStatus('error', 'Failed to initialize data');
-                        }
-                    } else {
-                        UIManager.updateSyncStatus('error', 'Sync failed: ' + error.message);
-                        UIManager.showToast('Sync failed: ' + error.message, 'mdi-alert');
-                    }
-                } finally {
-                    syncInProgress = false;
-                    loadingOverlay.classList.remove('active');
-                    UIManager.optimizedRenderEquipment();
-                    UIManager.calculateStats();
-                }
-            },
-
-            mergeEquipmentData(localData, remoteData) {
-                const remoteMap = new Map(remoteData.map(item => [item.id, item]));
-                const mergedData = [];
-                
-                for (const localItem of localData) {
-                    const remoteItem = remoteMap.get(localItem.id);
-                    
-                    if (remoteItem) {
-                        const mergedItem = {
-                            ...remoteItem,
-                            ...localItem,
-                            maintenanceHistory: this.mergeMaintenanceHistory(
-                                remoteItem.maintenanceHistory || [],
-                                localItem.maintenanceHistory || []
-                            )
-                        };
-                        
-                        mergedData.push(mergedItem);
-                        remoteMap.delete(localItem.id);
-                    } else {
-                        mergedData.push(localItem);
-                    }
-                }
-                
-                for (const remoteItem of remoteData) {
-                    if (remoteMap.has(remoteItem.id)) {
-                        mergedData.push(remoteItem);
-                    }
-                }
-                
-                return mergedData;
-            },
-
-            mergeMaintenanceHistory(remoteHistory, localHistory) {
-                const historyMap = new Map();
-                
-                for (const record of remoteHistory) {
-                    historyMap.set(record.id, record);
-                }
-                
-                for (const record of localHistory) {
-                    historyMap.set(record.id, record);
-                }
-                
-                return Array.from(historyMap.values()).sort((a, b) => {
-                    return new Date(b.date) - new Date(a.date);
-                });
+        function getStatusColor(status) {
+            switch(status) {
+                case 'active': return 'var(--success)';
+                case 'inactive': return 'var(--error)';
+                case 'maintenance': return 'var(--warning)';
+                default: return 'var(--text-light)';
             }
-        };
+        }
 
-        // UIManager Object
-        const UIManager = {
-            formatDate(dateString) {
-                if (!dateString) return 'N/A';
-                const options = { year: 'numeric', month: 'short', day: 'numeric' };
-                return new Date(dateString).toLocaleDateString(undefined, options);
-            },
+        function getStatusText(status) {
+            switch(status) {
+                case 'active': return 'Active';
+                case 'inactive': return 'Inactive';
+                case 'maintenance': return 'In Maintenance';
+                default: return 'Unknown';
+            }
+        }
 
-            getStatusColor(status) {
-                switch(status) {
-                    case 'active': return 'var(--success)';
-                    case 'inactive': return 'var(--error)';
-                    case 'maintenance': return 'var(--warning)';
-                    default: return 'var(--text-light)';
-                }
-            },
-
-            getStatusText(status) {
-                switch(status) {
-                    case 'active': return 'Active';
-                    case 'inactive': return 'Inactive';
-                    case 'maintenance': return 'In Maintenance';
-                    default: return 'Unknown';
-                }
-            },
-
-            isMaintenanceOverdue(equip) {
-                if (!equip.nextMaintenance) return false;
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                
-                const nextDate = new Date(equip.nextMaintenance);
-                nextDate.setHours(0, 0, 0, 0);
-                
-                return nextDate < today;
-            },
-
-            updateTokenIndicator() {
-                let tooltip = '';
-                let statusClass = 'none';
-                
-                if (GITHUB_PAT) {
-                    statusClass = 'valid';
-                    tooltip = 'GitHub token configured';
-                } else {
-                    statusClass = 'none';
-                    tooltip = 'No GitHub token';
-                }
-                
-                tokenIndicator.className = `status-icon ${statusClass}`;
-                tokenIndicator.setAttribute('data-tooltip', tooltip);
-            },
-
-            updateSyncStatus(status, message) {
-                syncStatus.className = `status-icon ${status}`;
-                syncStatus.setAttribute('data-tooltip', message);
-                
-                if (status === 'syncing') {
-                    syncNowBtn.classList.add('syncing');
-                } else {
-                    syncNowBtn.classList.remove('syncing');
-                }
-            },
-
-            toggleAdminMode() {
-                if (adminMode) {
-                    adminMode = false;
-                    adminToggle.classList.remove('active');
-                    addEquipmentBtn.style.display = 'none';
-                    editEquipmentBtn.style.display = 'none';
-                    deleteEquipmentBtn.style.display = 'none';
-                    this.showToast('Admin mode deactivated');
-                } else {
-                    pinInput.value = '';
-                    pinModal.classList.add('show');
-                }
-            },
-
-            showToast(message, icon = 'mdi-information') {
-                const toast = document.createElement('div');
-                toast.className = 'toast';
-                toast.innerHTML = `
-                    <i class="mdi ${icon}"></i>
-                    <span>${message}</span>
-                `;
-                document.body.appendChild(toast);
-                
-                setTimeout(() => {
-                    toast.remove();
-                }, 3000);
-            },
-
-            showSavingIndicator() {
-                if (savingTimer) {
-                    clearTimeout(savingTimer);
-                    savingTimer = null;
-                }
-                if (savingProgressInterval) {
-                    clearInterval(savingProgressInterval);
-                    savingProgressInterval = null;
-                }
-                
-                savingIndicator.classList.add('active');
-                savingProgressBar.style.width = '0%';
-                savingIndicatorStartTime = Date.now();
-                
-                const totalTime = 10000;
-                const interval = 50;
-                const steps = totalTime / interval;
-                const increment = 100 / steps;
-                
-                savingProgressInterval = setInterval(() => {
-                    const elapsed = Date.now() - savingIndicatorStartTime;
-                    const progress = Math.min(100, (elapsed / totalTime) * 100);
-                    savingProgressBar.style.width = `${progress}%`;
-                    
-                    if (progress >= 100) {
-                        clearInterval(savingProgressInterval);
-                        savingProgressInterval = null;
-                    }
-                }, interval);
-            },
+        function isMaintenanceOverdue(equip) {
+            if (!equip.nextMaintenance) return false;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
             
-            hideSavingIndicator() {
+            const nextDate = new Date(equip.nextMaintenance);
+            nextDate.setHours(0, 0, 0, 0);
+            
+            return nextDate < today;
+        }
+
+        function updateTokenIndicator() {
+            let tooltip = '';
+            let statusClass = 'none';
+            
+            if (GITHUB_PAT) {
+                statusClass = 'valid';
+                tooltip = 'GitHub token configured';
+            } else {
+                statusClass = 'none';
+                tooltip = 'No GitHub token';
+            }
+            
+            tokenIndicator.className = `status-icon ${statusClass}`;
+            tokenIndicator.setAttribute('data-tooltip', tooltip);
+        }
+
+        function updateSyncStatus(status, message) {
+            syncStatus.className = `status-icon ${status}`;
+            syncStatus.setAttribute('data-tooltip', message);
+            
+            if (status === 'syncing') {
+                syncNowBtn.classList.add('syncing');
+            } else {
+                syncNowBtn.classList.remove('syncing');
+            }
+        }
+
+        function toggleAdminMode() {
+            if (adminMode) {
+                adminMode = false;
+                adminToggle.classList.remove('active');
+                addEquipmentBtn.style.display = 'none';
+                editEquipmentBtn.style.display = 'none';
+                deleteEquipmentBtn.style.display = 'none';
+                showToast('Admin mode deactivated');
+            } else {
+                pinInput.value = '';
+                pinModal.classList.add('show');
+            }
+        }
+
+        function showToast(message, icon = 'mdi-information') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <i class="mdi ${icon}"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        function showSavingIndicator() {
+            if (savingTimer) {
+                clearTimeout(savingTimer);
+                savingTimer = null;
+            }
+            if (savingProgressInterval) {
+                clearInterval(savingProgressInterval);
+                savingProgressInterval = null;
+            }
+            
+            savingIndicator.classList.add('active');
+            savingProgressBar.style.width = '0%';
+            savingIndicatorStartTime = Date.now();
+            
+            const totalTime = 10000;
+            const interval = 50;
+            const steps = totalTime / interval;
+            const increment = 100 / steps;
+            
+            savingProgressInterval = setInterval(() => {
                 const elapsed = Date.now() - savingIndicatorStartTime;
-                const minDisplayTime = 10000;
+                const progress = Math.min(100, (elapsed / totalTime) * 100);
+                savingProgressBar.style.width = `${progress}%`;
                 
-                if (elapsed < minDisplayTime) {
-                    const remaining = minDisplayTime - elapsed;
-                    savingTimer = setTimeout(() => {
-                        savingIndicator.classList.remove('active');
-                        savingTimer = null;
-                    }, remaining);
-                } else {
-                    savingIndicator.classList.remove('active');
-                }
-                
-                if (savingProgressInterval) {
+                if (progress >= 100) {
                     clearInterval(savingProgressInterval);
                     savingProgressInterval = null;
                 }
-            },
+            }, interval);
+        }
+        
+        function hideSavingIndicator() {
+            const elapsed = Date.now() - savingIndicatorStartTime;
+            const minDisplayTime = 10000;
+            
+            if (elapsed < minDisplayTime) {
+                const remaining = minDisplayTime - elapsed;
+                savingTimer = setTimeout(() => {
+                    savingIndicator.classList.remove('active');
+                    savingTimer = null;
+                }, remaining);
+            } else {
+                savingIndicator.classList.remove('active');
+            }
+            
+            if (savingProgressInterval) {
+                clearInterval(savingProgressInterval);
+                savingProgressInterval = null;
+            }
+        }
 
-            showTokenModal() {
-                tokenInput.value = GITHUB_PAT || '';
-                tokenModal.classList.add('show');
-            },
+        async function fetchRemoteData() {
+            if (!GITHUB_PAT) {
+                throw new Error('No GitHub token configured');
+            }
 
-            showEquipmentModal(editMode = false, equipment = null) {
-                if (editMode && equipment) {
-                    equipmentModalTitle.textContent = 'Edit Equipment';
-                    equipName.value = equipment.name || '';
-                    equipCategory.value = equipment.category || 'tractor';
-                    equipId.value = equipment.id || '';
-                    equipId.disabled = !adminMode;
-                    if (adminMode) equipId.classList.add('editable-id');
-                    else equipId.classList.remove('editable-id');
-                    equipYear.value = equipment.year || '';
-                    equipStatus.value = equipment.status || 'active';
-                    equipNotes.value = equipment.notes || '';
-                    lastService.value = equipment.lastMaintenance || '';
-                    nextService.value = equipment.nextMaintenance || '';
-                } else {
-                    equipmentModalTitle.textContent = 'Add New Equipment';
-                    equipName.value = '';
-                    equipCategory.value = 'tractor';
-                    equipId.value = '';
-                    equipId.disabled = false;
-                    equipId.classList.remove('editable-id');
-                    equipYear.value = '';
-                    equipStatus.value = 'active';
-                    equipNotes.value = '';
-                    lastService.value = '';
-                    nextService.value = '';
-                }
-                equipmentModal.classList.add('show');
-            },
+            try {
+                const metaResponse = await fetch(
+                    `${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${DATA_PATH}`,
+                    { headers: { "Authorization": `Bearer ${GITHUB_PAT}` } }
+                );
 
-            async saveEquipment() {
-                const name = equipName.value.trim();
-                const category = equipCategory.value;
-                const id = equipId.value.trim();
-                const year = equipYear.value;
-                const status = equipStatus.value;
-                const notes = equipNotes.value;
-                const lastServiceDate = lastService.value;
-                const nextServiceDate = nextService.value;
-                
-                if (!name) {
-                    this.showToast('Please enter a name', 'mdi-alert');
-                    return;
+                if (!metaResponse.ok) {
+                    const errorData = await metaResponse.json();
+                    throw new Error(`GitHub API error: ${errorData.message}`);
                 }
                 
-                if (!id) {
-                    this.showToast('Please enter an ID', 'mdi-alert');
-                    return;
-                }
+                const fileInfo = await metaResponse.json();
+                const content = atob(fileInfo.content);
+                const remoteData = JSON.parse(content);
+                
+                return {
+                    equipment: remoteData.equipment || [],
+                    timestamp: remoteData.timestamp || 0,
+                    sha: fileInfo.sha
+                };
+            } catch (error) {
+                console.error('Fetch error:', error);
+                throw new Error('Failed to fetch data: ' + error.message);
+            }
+        }
 
-                if (lastServiceDate && nextServiceDate && new Date(lastServiceDate) > new Date(nextServiceDate)) {
-                    this.showToast('Next service must be after last service', 'mdi-alert');
-                    return;
-                }
-                
-                const isEdit = equipmentModalTitle.textContent.includes('Edit');
-                
-                if (isEdit) {
-                    const index = equipmentData.findIndex(e => e.id === selectedEquipment.id);
-                    if (index !== -1) {
-                        if (id !== selectedEquipment.id && equipmentData.some(e => e.id === id)) {
-                            this.showToast('ID already exists', 'mdi-alert');
-                            return;
-                        }
-                        
-                        equipmentData[index] = {
-                            ...equipmentData[index],
-                            id,
-                            name,
-                            category,
-                            year,
-                            status,
-                            notes,
-                            lastMaintenance: lastServiceDate,
-                            nextMaintenance: nextServiceDate,
-                            updatedAt: new Date().toISOString()
-                        };
-                        selectedEquipment = equipmentData[index];
-                        if (detailPanel.classList.contains('open')) {
-                            this.openDetailPanel(selectedEquipment);
-                        }
-                        this.showToast('Equipment updated', 'mdi-check');
+        async function pushDataToGitHub() {
+            if (!GITHUB_PAT) {
+                updateSyncStatus('error', 'No GitHub token');
+                return false;
+            }
+
+            const content = JSON.stringify({
+                equipment: equipmentData,
+                timestamp: Date.now()
+            }, null, 2);
+
+            try {
+                const bodyData = {
+                    message: "Update equipment data",
+                    content: btoa(unescape(encodeURIComponent(content))),
+                    branch: "main"
+                };
+
+                if (fileSHA) bodyData.sha = fileSHA;
+
+                const response = await fetch(
+                    `${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${DATA_PATH}`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Authorization": `Bearer ${GITHUB_PAT}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(bodyData)
                     }
+                );
+
+                const result = await response.json();
+                if (response.ok && result.content) {
+                    fileSHA = result.content.sha;
+                    lastSyncTimestamp = Date.now();
+                    return true;
                 } else {
-                    if (equipmentData.some(e => e.id === id)) {
-                        this.showToast('ID already exists', 'mdi-alert');
+                    console.error('GitHub API error:', result);
+                    throw new Error(result.message || 'Failed to push data');
+                }
+            } catch (error) {
+                console.error('Push error:', error);
+                if (error.message.includes('409')) {
+                    const remoteData = await fetchRemoteData();
+                    fileSHA = remoteData.sha;
+                    return await pushDataToGitHub(); // Retry
+                }
+                throw error;
+            }
+        }
+
+        async function saveChanges() {
+            if (!GITHUB_PAT) {
+                showTokenModal();
+                return false;
+            }
+
+            showSavingIndicator();
+            
+            syncStatusBar.classList.add('active');
+            syncMessage.textContent = "Saving changes to SHB Server...";
+            progressBar.style.width = '0%';
+            updateSyncStatus('syncing', 'Saving changes...');
+            
+            try {
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += 10;
+                    progressBar.style.width = `${progress}%`;
+                    if (progress >= 90) clearInterval(progressInterval);
+                }, 200);
+                
+                const success = await pushDataToGitHub();
+                
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                
+                if (success) {
+                    updateSyncStatus('synced', `Saved at ${new Date().toLocaleTimeString()}`);
+                    syncMessage.textContent = "Changes saved successfully!";
+                    setTimeout(() => {
+                        syncStatusBar.classList.remove('active');
+                        progressBar.style.width = '0%';
+                    }, 2000);
+                    
+                    setTimeout(syncData, 5000);
+                    return true;
+                } else {
+                    updateSyncStatus('error', 'Save failed!');
+                    syncMessage.textContent = "Failed to save changes. Please check your token.";
+                    return false;
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                updateSyncStatus('error', 'Save error: ' + error.message);
+                syncMessage.textContent = "Error: " + error.message;
+                return false;
+            } finally {
+                hideSavingIndicator();
+            }
+        }
+
+        function showTokenModal() {
+            tokenInput.value = GITHUB_PAT || '';
+            tokenModal.classList.add('show');
+        }
+
+        function showEquipmentModal(editMode = false, equipment = null) {
+            if (editMode && equipment) {
+                equipmentModalTitle.textContent = 'Edit Equipment';
+                equipName.value = equipment.name || '';
+                equipCategory.value = equipment.category || 'tractor';
+                equipId.value = equipment.id || '';
+                equipId.disabled = !adminMode;
+                if (adminMode) equipId.classList.add('editable-id');
+                else equipId.classList.remove('editable-id');
+                equipYear.value = equipment.year || '';
+                equipStatus.value = equipment.status || 'active';
+                equipNotes.value = equipment.notes || '';
+                lastService.value = equipment.lastMaintenance || '';
+                nextService.value = equipment.nextMaintenance || '';
+            } else {
+                equipmentModalTitle.textContent = 'Add New Equipment';
+                equipName.value = '';
+                equipCategory.value = 'tractor';
+                equipId.value = '';
+                equipId.disabled = false;
+                equipId.classList.remove('editable-id');
+                equipYear.value = '';
+                equipStatus.value = 'active';
+                equipNotes.value = '';
+                lastService.value = '';
+                nextService.value = '';
+            }
+            equipmentModal.classList.add('show');
+        }
+
+        async function saveEquipment() {
+            const name = equipName.value.trim();
+            const category = equipCategory.value;
+            const id = equipId.value.trim();
+            const year = equipYear.value;
+            const status = equipStatus.value;
+            const notes = equipNotes.value;
+            const lastServiceDate = lastService.value;
+            const nextServiceDate = nextService.value;
+            
+            if (!name) {
+                showToast('Please enter a name', 'mdi-alert');
+                return;
+            }
+            
+            if (!id) {
+                showToast('Please enter an ID', 'mdi-alert');
+                return;
+            }
+            
+            const isEdit = equipmentModalTitle.textContent.includes('Edit');
+            
+            if (isEdit) {
+                const index = equipmentData.findIndex(e => e.id === selectedEquipment.id);
+                if (index !== -1) {
+                    if (id !== selectedEquipment.id && equipmentData.some(e => e.id === id)) {
+                        showToast('ID already exists', 'mdi-alert');
                         return;
                     }
                     
-                    equipmentData.push({
+                    equipmentData[index] = {
+                        ...equipmentData[index],
                         id,
                         name,
                         category,
@@ -2581,609 +2381,633 @@
                         notes,
                         lastMaintenance: lastServiceDate,
                         nextMaintenance: nextServiceDate,
-                        maintenanceHistory: [],
-                        createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString()
-                    });
-                    this.showToast('Equipment added', 'mdi-check');
+                    };
+                    selectedEquipment = equipmentData[index];
+                    if (detailPanel.classList.contains('open')) {
+                        openDetailPanel(selectedEquipment);
+                    }
+                    showToast('Equipment updated', 'mdi-check');
                 }
+            } else {
+                if (equipmentData.some(e => e.id === id)) {
+                    showToast('ID already exists', 'mdi-alert');
+                    return;
+                }
+                
+                equipmentData.push({
+                    id,
+                    name,
+                    category,
+                    year,
+                    status,
+                    notes,
+                    lastMaintenance: lastServiceDate,
+                    nextMaintenance: nextServiceDate,
+                    maintenanceHistory: [],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                });
+                showToast('Equipment added', 'mdi-check');
+            }
+            
+            cachedFilteredEquipment = [];
+            
+            const success = await saveChanges();
+            if (success) {
+                optimizedRenderEquipment();
+                calculateStats();
+                equipmentModal.classList.remove('show');
+            }
+        }
+
+        function showMaintenanceModal(record = null) {
+            const isEditMode = !!record;
+            maintenanceModalTitle.textContent = isEditMode ? 
+                'Edit Maintenance Record' : 'Add Maintenance Record';
+
+            if (isEditMode) {
+                maintenanceDate.value = record.date;
+                maintenanceType.value = record.type;
+                maintenanceMileage.value = record.mileage || '';
+                maintenanceHours.value = record.hours || '';
+                maintenanceTech.value = record.technician || '';
+                maintenanceDetails.value = record.details || '';
+                maintenanceId = record.id;
+                nextServiceDate.style.display = 'none';
+            } else {
+                const today = new Date().toISOString().split('T')[0];
+                maintenanceDate.value = today;
+                maintenanceType.value = '';
+                maintenanceMileage.value = '';
+                maintenanceHours.value = '';
+                maintenanceTech.value = '';
+                maintenanceDetails.value = '';
+                maintenanceId = null;
+                nextServiceDate.style.display = 'block';
+                
+                const nextDate = new Date();
+                nextDate.setFullYear(nextDate.getFullYear() + 1);
+                nextServiceDate.value = nextDate.toISOString().split('T')[0];
+            }
+            maintenanceModal.classList.add('show');
+        }
+
+        async function saveMaintenanceRecord() {
+            if (!selectedEquipment) return;
+            
+            const date = maintenanceDate.value;
+            const type = maintenanceType.value.trim();
+            const mileage = maintenanceMileage.value ? parseInt(maintenanceMileage.value) : null;
+            const hours = maintenanceHours.value ? parseFloat(maintenanceHours.value) : null;
+            const tech = maintenanceTech.value.trim();
+            const details = maintenanceDetails.value.trim();
+            const nextServiceValue = nextServiceDate.value;
+            
+            if (!date) {
+                showToast('Please select a date', 'mdi-alert');
+                return;
+            }
+            
+            if (!type) {
+                showToast('Please enter maintenance type', 'mdi-alert');
+                return;
+            }
+            
+            const record = {
+                id: maintenanceId || 'MH-' + Date.now().toString().slice(-6),
+                date,
+                type,
+                mileage,
+                hours,
+                technician: tech,
+                details,
+                updatedAt: new Date().toISOString()
+            };
+            
+            const index = equipmentData.findIndex(e => e.id === selectedEquipment.id);
+            if (index !== -1) {
+                if (!equipmentData[index].maintenanceHistory) {
+                    equipmentData[index].maintenanceHistory = [];
+                }
+                
+                if (maintenanceId) {
+                    const recordIndex = equipmentData[index].maintenanceHistory.findIndex(r => r.id === maintenanceId);
+                    if (recordIndex !== -1) {
+                        equipmentData[index].maintenanceHistory[recordIndex] = record;
+                        showToast('Maintenance record updated', 'mdi-check');
+                    }
+                } else {
+                    equipmentData[index].maintenanceHistory.unshift(record);
+                    showToast('Maintenance record added', 'mdi-check');
+                    
+                    equipmentData[index].nextMaintenance = nextServiceValue;
+                }
+                
+                equipmentData[index].lastMaintenance = date;
+                equipmentData[index].updatedAt = new Date().toISOString();
                 
                 cachedFilteredEquipment = [];
                 
-                const success = await DataManager.saveChanges();
+                const success = await saveChanges();
                 if (success) {
-                    this.optimizedRenderEquipment();
-                    this.calculateStats();
-                    equipmentModal.classList.remove('show');
-                }
-            },
-
-            showMaintenanceModal(record = null) {
-                const isEditMode = !!record;
-                maintenanceModalTitle.textContent = isEditMode ? 
-                    'Edit Maintenance Record' : 'Add Maintenance Record';
-
-                if (isEditMode) {
-                    maintenanceDate.value = record.date;
-                    maintenanceType.value = record.type;
-                    maintenanceMileage.value = record.mileage || '';
-                    maintenanceHours.value = record.hours || '';
-                    maintenanceTech.value = record.technician || '';
-                    maintenanceDetails.value = record.details || '';
-                    maintenanceId = record.id;
-                    nextServiceDate.style.display = 'none';
-                } else {
-                    const today = new Date().toISOString().split('T')[0];
-                    maintenanceDate.value = today;
-                    maintenanceType.value = '';
-                    maintenanceMileage.value = '';
-                    maintenanceHours.value = '';
-                    maintenanceTech.value = '';
-                    maintenanceDetails.value = '';
+                    optimizedRenderEquipment();
+                    openDetailPanel(equipmentData[index]);
+                    maintenanceModal.classList.remove('show');
                     maintenanceId = null;
-                    nextServiceDate.style.display = 'block';
+                }
+            }
+        }
+
+        async function confirmDeleteEquipment() {
+            if (!selectedEquipment) return;
+            deleteEquipmentName.textContent = selectedEquipment.name;
+            deleteModal.classList.add('show');
+        }
+
+        async function deleteEquipment() {
+            if (!selectedEquipment) return;
+            const index = equipmentData.findIndex(e => e.id === selectedEquipment.id);
+            if (index !== -1) {
+                equipmentData.splice(index, 1);
+                cachedFilteredEquipment = [];
+                const success = await saveChanges();
+                if (success) {
+                    optimizedRenderEquipment();
+                    calculateStats();
+                    closeDetailPanel();
+                    showToast('Equipment deleted', 'mdi-check');
+                } else {
+                    showToast('Failed to delete. Check token!', 'mdi-alert');
+                }
+            }
+            deleteModal.classList.remove('show');
+        }
+
+        async function syncData(force = false) {
+            if (syncInProgress || !GITHUB_PAT) return;
+            
+            syncInProgress = true;
+            updateSyncStatus('syncing', 'Syncing...');
+            loadingOverlay.classList.add('active');
+            
+            try {
+                const remote = await fetchRemoteData();
+                
+                cachedFilteredEquipment = [];
+                
+                if (force || remote.timestamp > lastSyncTimestamp) {
+                    const mergedEquipment = mergeEquipmentData(equipmentData, remote.equipment);
                     
-                    const nextDate = new Date();
+                    equipmentData = mergedEquipment;
+                    fileSHA = remote.sha;
+                    lastSyncTimestamp = remote.timestamp;
+                    
+                    showToast('Data synced successfully', 'mdi-cloud-check');
+                } else {
+                    showToast('Data is up to date', 'mdi-cloud-check');
+                }
+                
+                updateSyncStatus('synced', `Synced at ${new Date().toLocaleTimeString()}`);
+            } catch (error) {
+                console.error('Sync error:', error);
+                if (error.message.includes('404')) {
+                    equipmentData = [];
+                    cachedFilteredEquipment = [];
+                    const pushSuccess = await pushDataToGitHub();
+                    if (pushSuccess) {
+                        updateSyncStatus('synced', 'Initialized new data file');
+                    } else {
+                        updateSyncStatus('error', 'Failed to initialize data');
+                    }
+                } else {
+                    updateSyncStatus('error', 'Sync failed: ' + error.message);
+                    showToast('Sync failed: ' + error.message, 'mdi-alert');
+                }
+            } finally {
+                syncInProgress = false;
+                loadingOverlay.classList.remove('active');
+                optimizedRenderEquipment();
+                calculateStats();
+            }
+        }
+
+        function mergeEquipmentData(localData, remoteData) {
+            const remoteMap = new Map(remoteData.map(item => [item.id, item]));
+            const mergedData = [];
+            
+            for (const localItem of localData) {
+                const remoteItem = remoteMap.get(localItem.id);
+                
+                if (remoteItem) {
+                    const mergedItem = {
+                        ...remoteItem,
+                        ...localItem,
+                        maintenanceHistory: mergeMaintenanceHistory(
+                            remoteItem.maintenanceHistory || [],
+                            localItem.maintenanceHistory || []
+                        )
+                    };
+                    
+                    mergedData.push(mergedItem);
+                    remoteMap.delete(localItem.id);
+                } else {
+                    mergedData.push(localItem);
+                }
+            }
+            
+            for (const remoteItem of remoteData) {
+                if (remoteMap.has(remoteItem.id)) {
+                    mergedData.push(remoteItem);
+                }
+            }
+            
+            return mergedData;
+        }
+
+        function mergeMaintenanceHistory(remoteHistory, localHistory) {
+            const historyMap = new Map();
+            
+            for (const record of remoteHistory) {
+                historyMap.set(record.id, record);
+            }
+            
+            for (const record of localHistory) {
+                historyMap.set(record.id, record);
+            }
+            
+            return Array.from(historyMap.values()).sort((a, b) => {
+                return new Date(b.date) - new Date(a.date);
+            });
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        function calculateStats() {
+            for (const category in categoryCounts) {
+                categoryCounts[category].textContent = '0';
+            }
+            
+            equipmentData.forEach(equip => {
+                if (categoryCounts[equip.category]) {
+                    const current = parseInt(categoryCounts[equip.category].textContent);
+                    categoryCounts[equip.category].textContent = current + 1;
+                }
+            });
+            
+            categoryCounts.all.textContent = equipmentData.length;
+            stats.total.textContent = equipmentData.length;
+            stats.overdue.textContent = equipmentData.filter(isMaintenanceOverdue).length;
+            
+            if (equipmentData.length > 0) {
+                welcomeMessage.style.display = 'none';
+            } else {
+                welcomeMessage.style.display = 'block';
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function optimizedFilterEquipment() {
+            const searchTerm = searchInput.value.trim().toLowerCase();
+            const activeCategory = document.querySelector('.category-chip.active').dataset.category;
+            const sortValue = sortSelect.value;
+            
+            if (searchTerm === lastSearchTerm && 
+                activeCategory === lastActiveCategory && 
+                sortValue === lastSortValue &&
+                cachedFilteredEquipment.length > 0) {
+                return cachedFilteredEquipment;
+            }
+            
+            const loadingIndicator = document.querySelector('.search-loading');
+            loadingIndicator.classList.add('active');
+            
+            const startTime = performance.now();
+            let filtered = equipmentData;
+            
+            if (activeCategory !== 'all') {
+                filtered = filtered.filter(equip => equip.category === activeCategory);
+            }
+            
+            if (searchTerm) {
+                filtered = filtered.filter(equip => {
+                    const searchString = (
+                        (equip.name || '') + '|' +
+                        (equip.id || '') + '|' +
+                        (equip.notes || '') + '|' +
+                        (equip.year ? equip.year.toString() : '')
+                    ).toLowerCase();
+                    return searchString.includes(searchTerm);
+                });
+            }
+            
+            filtered = optimizedSortEquipment(filtered, sortValue);
+            cachedFilteredEquipment = filtered;
+            lastSearchTerm = searchTerm;
+            lastActiveCategory = activeCategory;
+            lastSortValue = sortValue;
+            
+            const duration = performance.now() - startTime;
+            console.log(`Filtered ${filtered.length} items in ${duration.toFixed(2)}ms`);
+            loadingIndicator.classList.remove('active');
+            return filtered;
+        }
+
+        function optimizedSortEquipment(equipment, sortValue) {
+            switch(sortValue) {
+                case 'name-asc': return equipment.sort((a, b) => a.name.localeCompare(b.name));
+                case 'name-desc': return equipment.sort((a, b) => b.name.localeCompare(a.name));
+                case 'year-asc': return equipment.sort((a, b) => (a.year || 0) - (b.year || 0));
+                case 'year-desc': return equipment.sort((a, b) => (b.year || 0) - (a.year || 0));
+                case 'nextService': return equipment.sort((a, b) => {
+                    const dateA = a.nextMaintenance ? new Date(a.nextMaintenance) : new Date(0);
+                    const dateB = b.nextMaintenance ? new Date(b.nextMaintenance) : new Date(0);
+                    return dateA - dateB;
+                });
+                default: return equipment.sort((a, b) => a.name.localeCompare(b.name));
+            }
+        }
+
+        function optimizedRenderEquipment() {
+            const filteredEquipment = optimizedFilterEquipment();
+            
+            if (filteredEquipment.length === 0) {
+                equipmentGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="mdi mdi-magnify-close"></i>
+                        </div>
+                        <h3>No Equipment Found</h3>
+                        <p>Try changing your filters or search term to find what you're looking for.</p>
+                        <button class="btn btn-outline" id="resetFiltersBtn">
+                            <i class="mdi mdi-filter-remove"></i> Reset Filters
+                        </button>
+                    </div>
+                `;
+                document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+                return;
+            }
+            
+            const fragment = document.createDocumentFragment();
+            filteredEquipment.forEach(equip => {
+                const item = document.createElement('div');
+                item.className = 'equipment-item';
+                
+                const statusIndicator = equip.status ? 
+                    `<span class="status-indicator" style="background-color: ${getStatusColor(equip.status)}"></span>${getStatusText(equip.status)}` : 
+                    '';
+                
+                item.innerHTML = `
+                    <div class="equipment-item-header">
+                        <div class="equipment-name">${equip.name}</div>
+                        ${isMaintenanceOverdue(equip) ? '<div class="overdue-badge"><i class="mdi mdi-alert"></i> MAINTENANCE DUE</div>' : ''}
+                    </div>
+                    <div class="equipment-id">${equip.id}</div>
+                    <div class="equipment-meta">
+                        <span>Year: ${equip.year || 'N/A'}</span>
+                        <span>Next Service: ${formatDate(equip.nextMaintenance)}</span>
+                        <span>${statusIndicator}</span>
+                    </div>
+                    <div class="equipment-notes">${equip.notes || 'No notes available'}</div>
+                `;
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.equipment-item').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    openDetailPanel(equip);
+                });
+                fragment.appendChild(item);
+            });
+            equipmentGrid.innerHTML = '';
+            equipmentGrid.appendChild(fragment);
+        }
+
+        function resetFilters() {
+            searchInput.value = '';
+            clearSearchBtn.style.display = 'none';
+            document.querySelectorAll('.category-chip').forEach(chip => chip.classList.remove('active'));
+            document.querySelector('.category-chip[data-category="all"]').classList.add('active');
+            cachedFilteredEquipment = [];
+            lastSearchTerm = '';
+            lastActiveCategory = 'all';
+            lastSortValue = 'name-asc';
+            optimizedRenderEquipment();
+        }
+
+        function openDetailPanel(equip) {
+            selectedEquipment = equip;
+            document.getElementById('detailId').textContent = equip.id;
+            document.getElementById('detailName').textContent = equip.name;
+            document.getElementById('detailCategory').textContent = equip.category.charAt(0).toUpperCase() + equip.category.slice(1);
+            document.getElementById('detailYear').textContent = equip.year || 'N/A';
+            document.getElementById('detailStatus').innerHTML = equip.status ? 
+                `<span class="status-indicator" style="background-color: ${getStatusColor(equip.status)}"></span>${getStatusText(equip.status)}` : 
+                '';
+            document.getElementById('detailLastService').textContent = formatDate(equip.lastMaintenance);
+            document.getElementById('detailNextService').textContent = formatDate(equip.nextMaintenance);
+            document.getElementById('detailNotes').textContent = equip.notes || 'No notes available';
+            
+            const warningElement = document.getElementById('maintenanceWarning');
+            warningElement.style.display = isMaintenanceOverdue(equip) ? 'flex' : 'none';
+            renderMaintenanceHistory(equip.maintenanceHistory || []);
+            detailPanel.classList.add('open');
+            
+            if (adminMode) {
+                editEquipmentBtn.style.display = 'flex';
+                deleteEquipmentBtn.style.display = 'flex';
+            }
+        }
+
+        function renderMaintenanceHistory(history) {
+            maintenanceHistory.innerHTML = '';
+            if (!history || history.length === 0) {
+                maintenanceHistory.innerHTML = `
+                    <div class="history-item">
+                        <div class="history-content">No maintenance records found</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const fragment = document.createDocumentFragment();
+            history.forEach(record => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                const editBtn = adminMode ? 
+                    `<button class="edit-maintenance" data-id="${record.id}">
+                        <i class="mdi mdi-pencil"></i>
+                    </button>` : '';
+                    
+                let usageInfo = '';
+                if (record.mileage || record.hours) {
+                    usageInfo = `<div class="history-usage">`;
+                    if (record.mileage) usageInfo += `<span>Mileage: ${record.mileage.toLocaleString()} miles</span>`;
+                    if (record.mileage && record.hours) usageInfo += ` | `;
+                    if (record.hours) usageInfo += `<span>Hours: ${record.hours.toLocaleString()} hrs</span>`;
+                    usageInfo += `</div>`;
+                }
+                
+                item.innerHTML = `
+                    <div class="history-header">
+                        <span class="history-date">${formatDate(record.date)}</span>
+                        <span class="history-type">${record.type}</span>
+                        ${editBtn}
+                    </div>
+                    <div class="history-content">
+                        ${record.details}
+                    </div>
+                    ${usageInfo}
+                    <div class="history-tech">
+                        <span>Technician: ${record.technician || 'N/A'}</span>
+                    </div>
+                `;
+                if (adminMode) {
+                    item.querySelector('.edit-maintenance').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showMaintenanceModal(record);
+                    });
+                }
+                fragment.appendChild(item);
+            });
+            maintenanceHistory.appendChild(fragment);
+        }
+
+        function closeDetailPanel() {
+            detailPanel.classList.remove('open');
+            document.querySelectorAll('.equipment-item').forEach(i => i.classList.remove('selected'));
+            selectedEquipment = null;
+        }
+
+        function startSyncInterval() {
+            if (syncIntervalId) {
+                clearInterval(syncIntervalId);
+            }
+            syncIntervalId = setInterval(() => syncData(false), syncInterval);
+        }
+
+        async function init() {
+            updateTokenIndicator();
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            if (GITHUB_PAT) {
+                await syncData(true);
+                startSyncInterval();
+            } else {
+                updateSyncStatus('error', 'No GitHub token configured');
+            }
+            
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            document.getElementById('adminToggle').addEventListener('click', toggleAdminMode);
+            tokenIndicator.addEventListener('click', () => {
+                tokenInput.value = GITHUB_PAT || '';
+                tokenModal.classList.add('show');
+            });
+            saveTokenBtn.addEventListener('click', () => {
+                const token = tokenInput.value.trim();
+                if (token) {
+                    GITHUB_PAT = token;
+                    localStorage.setItem('github_pat', token);
+                    updateTokenIndicator();
+                    tokenModal.classList.remove('show');
+                    setTimeout(() => {
+                        syncData(true);
+                        startSyncInterval();
+                    }, 1000);
+                    showToast('Token saved', 'mdi-check');
+                }
+            });
+            clearTokenBtn.addEventListener('click', () => {
+                GITHUB_PAT = '';
+                localStorage.removeItem('github_pat');
+                updateTokenIndicator();
+                tokenModal.classList.remove('show');
+                showToast('Token cleared', 'mdi-check');
+            });
+            closeTokenModal.addEventListener('click', () => tokenModal.classList.remove('show'));
+            pinBtns.forEach(btn => btn.addEventListener('click', () => {
+                if (pinInput.value.length < 4) pinInput.value += btn.dataset.value;
+            }));
+            pinBackspace.addEventListener('click', () => pinInput.value = pinInput.value.slice(0, -1));
+            pinEnter.addEventListener('click', () => {
+                if (pinInput.value === ADMIN_PIN) {
+                    adminMode = true;
+                    adminToggle.classList.add('active');
+                    addEquipmentBtn.style.display = 'flex';
+                    editEquipmentBtn.style.display = 'flex';
+                    deleteEquipmentBtn.style.display = 'flex';
+                    pinModal.classList.remove('show');
+                    showToast('Admin mode activated', 'mdi-shield-check');
+                } else {
+                    pinInput.value = '';
+                    showToast('Invalid PIN', 'mdi-lock-alert');
+                }
+            });
+            closePinModal.addEventListener('click', () => pinModal.classList.remove('show'));
+            closePanelBtn.addEventListener('click', closeDetailPanel);
+            addEquipmentBtn.addEventListener('click', () => showEquipmentModal());
+            editEquipmentBtn.addEventListener('click', () => {
+                if (selectedEquipment) showEquipmentModal(true, selectedEquipment);
+            });
+            addMaintenanceBtn.addEventListener('click', () => {
+                if (selectedEquipment) showMaintenanceModal();
+            });
+            deleteEquipmentBtn.addEventListener('click', () => {
+                if (selectedEquipment) confirmDeleteEquipment();
+            });
+            saveEquipmentBtn.addEventListener('click', saveEquipment);
+            cancelEquipmentBtn.addEventListener('click', () => equipmentModal.classList.remove('show'));
+            closeEquipmentModal.addEventListener('click', () => equipmentModal.classList.remove('show'));
+            saveMaintenanceBtn.addEventListener('click', saveMaintenanceRecord);
+            cancelMaintenanceBtn.addEventListener('click', () => maintenanceModal.classList.remove('show'));
+            closeMaintenanceModal.addEventListener('click', () => maintenanceModal.classList.remove('show'));
+            confirmDeleteBtn.addEventListener('click', deleteEquipment);
+            cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.remove('show'));
+            closeDeleteModal.addEventListener('click', () => deleteModal.classList.remove('show'));
+            searchInput.addEventListener('input', debounce(() => {
+                clearSearchBtn.style.display = searchInput.value ? 'block' : 'none';
+                optimizedRenderEquipment();
+            }, 300));
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                clearSearchBtn.style.display = 'none';
+                optimizedRenderEquipment();
+            });
+            categoryFilters.forEach(chip => chip.addEventListener('click', () => {
+                categoryFilters.forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                optimizedRenderEquipment();
+            }));
+            sortSelect.addEventListener('change', () => optimizedRenderEquipment());
+            quickAddBtn.addEventListener('click', () => showEquipmentModal());
+            quickSyncBtn.addEventListener('click', () => syncData(true));
+            syncNowBtn.addEventListener('click', () => syncData(true));
+            
+            maintenanceDate.addEventListener('change', () => {
+                if (maintenanceDate.value) {
+                    const nextDate = new Date(maintenanceDate.value);
                     nextDate.setFullYear(nextDate.getFullYear() + 1);
                     nextServiceDate.value = nextDate.toISOString().split('T')[0];
                 }
-                maintenanceModal.classList.add('show');
-            },
+            });
+        }
 
-            async saveMaintenanceRecord() {
-                if (!selectedEquipment) return;
-                
-                const date = maintenanceDate.value;
-                const type = maintenanceType.value.trim();
-                const mileage = maintenanceMileage.value ? parseInt(maintenanceMileage.value) : null;
-                const hours = maintenanceHours.value ? parseFloat(maintenanceHours.value) : null;
-                const tech = maintenanceTech.value.trim();
-                const details = maintenanceDetails.value.trim();
-                const nextServiceValue = nextServiceDate.value;
-                
-                if (!date) {
-                    this.showToast('Please select a date', 'mdi-alert');
-                    return;
-                }
-                
-                if (!type) {
-                    this.showToast('Please enter maintenance type', 'mdi-alert');
-                    return;
-                }
-                
-                const record = {
-                    id: maintenanceId || 'MH-' + Date.now().toString().slice(-6),
-                    date,
-                    type,
-                    mileage,
-                    hours,
-                    technician: tech,
-                    details,
-                    updatedAt: new Date().toISOString()
-                };
-                
-                const index = equipmentData.findIndex(e => e.id === selectedEquipment.id);
-                if (index !== -1) {
-                    if (!equipmentData[index].maintenanceHistory) {
-                        equipmentData[index].maintenanceHistory = [];
-                    }
-                    
-                    if (maintenanceId) {
-                        const recordIndex = equipmentData[index].maintenanceHistory.findIndex(r => r.id === maintenanceId);
-                        if (recordIndex !== -1) {
-                            equipmentData[index].maintenanceHistory[recordIndex] = record;
-                            this.showToast('Maintenance record updated', 'mdi-check');
-                        }
-                    } else {
-                        equipmentData[index].maintenanceHistory.unshift(record);
-                        this.showToast('Maintenance record added', 'mdi-check');
-                        
-                        equipmentData[index].nextMaintenance = nextServiceValue;
-                    }
-                    
-                    equipmentData[index].lastMaintenance = date;
-                    equipmentData[index].updatedAt = new Date().toISOString();
-                    
-                    cachedFilteredEquipment = [];
-                    
-                    const success = await DataManager.saveChanges();
-                    if (success) {
-                        this.optimizedRenderEquipment();
-                        this.openDetailPanel(equipmentData[index]);
-                        maintenanceModal.classList.remove('show');
-                        maintenanceId = null;
-                    }
-                }
-            },
-
-            confirmDeleteEquipment() {
-                if (!selectedEquipment) return;
-                deleteEquipmentName.textContent = selectedEquipment.name;
-                deleteModal.classList.add('show');
-            },
-
-            async deleteEquipment() {
-                if (!selectedEquipment) return;
-                const index = equipmentData.findIndex(e => e.id === selectedEquipment.id);
-                if (index !== -1) {
-                    equipmentData.splice(index, 1);
-                    cachedFilteredEquipment = [];
-                    const success = await DataManager.saveChanges();
-                    if (success) {
-                        this.optimizedRenderEquipment();
-                        this.calculateStats();
-                        this.closeDetailPanel();
-                        this.showToast('Equipment deleted', 'mdi-check');
-                    } else {
-                        this.showToast('Failed to delete. Check token!', 'mdi-alert');
-                    }
-                }
-                deleteModal.classList.remove('show');
-            },
-
-            toggleTheme() {
-                const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-                document.documentElement.setAttribute('data-theme', newTheme);
-                localStorage.setItem('theme', newTheme);
-            },
-
-            calculateStats() {
-                for (const category in categoryCounts) {
-                    categoryCounts[category].textContent = '0';
-                }
-                
-                equipmentData.forEach(equip => {
-                    if (categoryCounts[equip.category]) {
-                        const current = parseInt(categoryCounts[equip.category].textContent);
-                        categoryCounts[equip.category].textContent = current + 1;
-                    }
-                });
-                
-                categoryCounts.all.textContent = equipmentData.length;
-                stats.total.textContent = equipmentData.length;
-                stats.overdue.textContent = equipmentData.filter(this.isMaintenanceOverdue).length;
-                
-                if (equipmentData.length > 0) {
-                    welcomeMessage.style.display = 'none';
-                } else {
-                    welcomeMessage.style.display = 'block';
-                }
-            },
-
-            debounce(func, wait) {
-                let timeout;
-                return function executedFunction(...args) {
-                    const later = () => {
-                        clearTimeout(timeout);
-                        func(...args);
-                    };
-                    clearTimeout(timeout);
-                    timeout = setTimeout(later, wait);
-                };
-            },
-
-            optimizedFilterEquipment() {
-                const searchTerm = searchInput.value.trim().toLowerCase();
-                const activeCategory = document.querySelector('.category-chip.active').dataset.category;
-                const sortValue = sortSelect.value;
-                
-                if (searchTerm === lastSearchTerm && 
-                    activeCategory === lastActiveCategory && 
-                    sortValue === lastSortValue &&
-                    cachedFilteredEquipment.length > 0) {
-                    return cachedFilteredEquipment;
-                }
-                
-                const loadingIndicator = document.querySelector('.search-loading');
-                loadingIndicator.classList.add('active');
-                
-                const startTime = performance.now();
-                let filtered = equipmentData;
-                
-                if (activeCategory !== 'all') {
-                    filtered = filtered.filter(equip => equip.category === activeCategory);
-                }
-                
-                if (searchTerm) {
-                    filtered = filtered.filter(equip => {
-                        const searchString = (
-                            (equip.name || '') + '|' +
-                            (equip.id || '') + '|' +
-                            (equip.notes || '') + '|' +
-                            (equip.year ? equip.year.toString() : '')
-                        ).toLowerCase();
-                        return searchString.includes(searchTerm);
-                    });
-                }
-                
-                filtered = this.optimizedSortEquipment(filtered, sortValue);
-                cachedFilteredEquipment = filtered;
-                lastSearchTerm = searchTerm;
-                lastActiveCategory = activeCategory;
-                lastSortValue = sortValue;
-                
-                const duration = performance.now() - startTime;
-                console.log(`Filtered ${filtered.length} items in ${duration.toFixed(2)}ms`);
-                loadingIndicator.classList.remove('active');
-                return filtered;
-            },
-
-            optimizedSortEquipment(equipment, sortValue) {
-                switch(sortValue) {
-                    case 'name-asc': return equipment.sort((a, b) => a.name.localeCompare(b.name));
-                    case 'name-desc': return equipment.sort((a, b) => b.name.localeCompare(a.name));
-                    case 'year-asc': return equipment.sort((a, b) => (a.year || 0) - (b.year || 0));
-                    case 'year-desc': return equipment.sort((a, b) => (b.year || 0) - (a.year || 0));
-                    case 'nextService': return equipment.sort((a, b) => {
-                        const dateA = a.nextMaintenance ? new Date(a.nextMaintenance) : new Date(0);
-                        const dateB = b.nextMaintenance ? new Date(b.nextMaintenance) : new Date(0);
-                        return dateA - dateB;
-                    });
-                    default: return equipment.sort((a, b) => a.name.localeCompare(b.name));
-                }
-            },
-
-            optimizedRenderEquipment() {
-                const filteredEquipment = this.optimizedFilterEquipment();
-                
-                if (filteredEquipment.length === 0) {
-                    equipmentGrid.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">
-                                <i class="mdi mdi-magnify-close"></i>
-                            </div>
-                            <h3>No Equipment Found</h3>
-                            <p>Try changing your filters or search term to find what you're looking for.</p>
-                            <button class="btn btn-outline" id="resetFiltersBtn">
-                                <i class="mdi mdi-filter-remove"></i> Reset Filters
-                            </button>
-                        </div>
-                    `;
-                    document.getElementById('resetFiltersBtn').addEventListener('click', this.resetFilters.bind(this));
-                    return;
-                }
-                
-                const start = (currentPage - 1) * itemsPerPage;
-                const end = start + itemsPerPage;
-                const pageItems = filteredEquipment.slice(start, end);
-                
-                const fragment = document.createDocumentFragment();
-                pageItems.forEach(equip => {
-                    const item = document.createElement('div');
-                    item.className = 'equipment-item';
-                    
-                    const statusIndicator = equip.status ? 
-                        `<span class="status-indicator" style="background-color: \( {this.getStatusColor(equip.status)}"></span> \){this.getStatusText(equip.status)}` : 
-                        '';
-                    
-                    item.innerHTML = `
-                        <div class="equipment-item-header">
-                            <div class="equipment-name">${equip.name}</div>
-                            ${this.isMaintenanceOverdue(equip) ? '<div class="overdue-badge"><i class="mdi mdi-alert"></i> MAINTENANCE DUE</div>' : ''}
-                        </div>
-                        <div class="equipment-id">${equip.id}</div>
-                        <div class="equipment-meta">
-                            <span>Year: ${equip.year || 'N/A'}</span>
-                            <span>Next Service: ${this.formatDate(equip.nextMaintenance)}</span>
-                            <span>${statusIndicator}</span>
-                        </div>
-                        <div class="equipment-notes">${equip.notes || 'No notes available'}</div>
-                    `;
-                    item.addEventListener('click', () => {
-                        document.querySelectorAll('.equipment-item').forEach(i => i.classList.remove('selected'));
-                        item.classList.add('selected');
-                        this.openDetailPanel(equip);
-                    });
-                    fragment.appendChild(item);
-                });
-                
-                equipmentGrid.innerHTML = '';
-                equipmentGrid.appendChild(fragment);
-                
-                // Pagination controls
-                const pagination = document.createElement('div');
-                pagination.style.display = 'flex';
-                pagination.style.justifyContent = 'center';
-                pagination.style.gap = '10px';
-                pagination.style.marginTop = '20px';
-                
-                const prevBtn = document.createElement('button');
-                prevBtn.className = 'btn btn-outline';
-                prevBtn.textContent = 'Previous';
-                prevBtn.disabled = currentPage === 1;
-                prevBtn.addEventListener('click', () => {
-                    if (currentPage > 1) {
-                        currentPage--;
-                        this.optimizedRenderEquipment();
-                    }
-                });
-                
-                const nextBtn = document.createElement('button');
-                nextBtn.className = 'btn btn-outline';
-                nextBtn.textContent = 'Next';
-                nextBtn.disabled = end >= filteredEquipment.length;
-                nextBtn.addEventListener('click', () => {
-                    if (end < filteredEquipment.length) {
-                        currentPage++;
-                        this.optimizedRenderEquipment();
-                    }
-                });
-                
-                const pageInfo = document.createElement('span');
-                pageInfo.textContent = `Page ${currentPage} of ${Math.ceil(filteredEquipment.length / itemsPerPage)}`;
-                
-                pagination.appendChild(prevBtn);
-                pagination.appendChild(pageInfo);
-                pagination.appendChild(nextBtn);
-                equipmentGrid.appendChild(pagination);
-            },
-
-            resetFilters() {
-                searchInput.value = '';
-                clearSearchBtn.style.display = 'none';
-                document.querySelectorAll('.category-chip').forEach(chip => chip.classList.remove('active'));
-                document.querySelector('.category-chip[data-category="all"]').classList.add('active');
-                cachedFilteredEquipment = [];
-                lastSearchTerm = '';
-                lastActiveCategory = 'all';
-                lastSortValue = 'name-asc';
-                this.optimizedRenderEquipment();
-            },
-
-            openDetailPanel(equip) {
-                selectedEquipment = equip;
-                document.getElementById('detailId').textContent = equip.id;
-                document.getElementById('detailName').textContent = equip.name;
-                document.getElementById('detailCategory').textContent = equip.category.charAt(0).toUpperCase() + equip.category.slice(1);
-                document.getElementById('detailYear').textContent = equip.year || 'N/A';
-                document.getElementById('detailStatus').innerHTML = equip.status ? 
-                    `<span class="status-indicator" style="background-color: \( {this.getStatusColor(equip.status)}"></span> \){this.getStatusText(equip.status)}` : 
-                    '';
-                document.getElementById('detailLastService').textContent = this.formatDate(equip.lastMaintenance);
-                document.getElementById('detailNextService').textContent = this.formatDate(equip.nextMaintenance);
-                document.getElementById('detailNotes').textContent = equip.notes || 'No notes available';
-                
-                const warningElement = document.getElementById('maintenanceWarning');
-                warningElement.style.display = this.isMaintenanceOverdue(equip) ? 'flex' : 'none';
-                this.renderMaintenanceHistory(equip.maintenanceHistory || []);
-                detailPanel.classList.add('open');
-                
-                if (adminMode) {
-                    editEquipmentBtn.style.display = 'flex';
-                    deleteEquipmentBtn.style.display = 'flex';
-                }
-            },
-
-            renderMaintenanceHistory(history) {
-                maintenanceHistory.innerHTML = '';
-                if (!history || history.length === 0) {
-                    maintenanceHistory.innerHTML = `
-                        <div class="history-item">
-                            <div class="history-content">No maintenance records found</div>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                const fragment = document.createDocumentFragment();
-                history.forEach(record => {
-                    const item = document.createElement('div');
-                    item.className = 'history-item';
-                    const editBtn = adminMode ? 
-                        `<button class="edit-maintenance" data-id="${record.id}">
-                            <i class="mdi mdi-pencil"></i>
-                        </button>` : '';
-                        
-                    let usageInfo = '';
-                    if (record.mileage || record.hours) {
-                        usageInfo = `<div class="history-usage">`;
-                        if (record.mileage) usageInfo += `<span>Mileage: ${record.mileage.toLocaleString()} miles</span>`;
-                        if (record.mileage && record.hours) usageInfo += ` | `;
-                        if (record.hours) usageInfo += `<span>Hours: ${record.hours.toLocaleString()} hrs</span>`;
-                        usageInfo += `</div>`;
-                    }
-                    
-                    item.innerHTML = `
-                        <div class="history-header">
-                            <span class="history-date">${this.formatDate(record.date)}</span>
-                            <span class="history-type">${record.type}</span>
-                            ${editBtn}
-                        </div>
-                        <div class="history-content">
-                            ${record.details}
-                        </div>
-                        ${usageInfo}
-                        <div class="history-tech">
-                            <span>Technician: ${record.technician || 'N/A'}</span>
-                        </div>
-                    `;
-                    if (adminMode) {
-                        item.querySelector('.edit-maintenance').addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            this.showMaintenanceModal(record);
-                        });
-                    }
-                    fragment.appendChild(item);
-                });
-                maintenanceHistory.appendChild(fragment);
-            },
-
-            closeDetailPanel() {
-                detailPanel.classList.remove('open');
-                document.querySelectorAll('.equipment-item').forEach(i => i.classList.remove('selected'));
-                selectedEquipment = null;
-            },
-
-            async testToken(token) {
-                try {
-                    const response = await fetch(`${GITHUB_API}/user`, { headers: { "Authorization": `Bearer ${token}` } });
-                    return response.ok;
-                } catch { return false; }
-            },
-
-            startSyncInterval() {
-                if (syncIntervalId) {
-                    clearInterval(syncIntervalId);
-                }
-                syncIntervalId = setInterval(() => DataManager.syncData(false), syncInterval);
-            },
-
-            changeAdminPin(newPin) {
-                if (newPin.length === 4) {
-                    const hash = hashPin(newPin);
-                    localStorage.setItem('admin_pin_hash', hash);
-                    ADMIN_PIN_HASH = hash;
-                    this.showToast('PIN updated');
-                } else {
-                    this.showToast('PIN must be 4 digits', 'mdi-alert');
-                }
-            },
-
-            init() {
-                this.updateTokenIndicator();
-                const savedTheme = localStorage.getItem('theme') || 'light';
-                document.documentElement.setAttribute('data-theme', savedTheme);
-                
-                if (GITHUB_PAT) {
-                    DataManager.syncData(true); // Force sync on init
-                    this.startSyncInterval();
-                } else {
-                    this.updateSyncStatus('error', 'No GitHub token configured');
-                }
-                
-                // Event listeners
-                document.getElementById('themeToggle').addEventListener('click', this.toggleTheme.bind(this));
-                document.getElementById('adminToggle').addEventListener('click', this.toggleAdminMode.bind(this));
-                tokenIndicator.addEventListener('click', () => {
-                    tokenInput.value = GITHUB_PAT || '';
-                    tokenModal.classList.add('show');
-                });
-                saveTokenBtn.addEventListener('click', async () => {
-                    const token = tokenInput.value.trim();
-                    if (token) {
-                        const valid = await this.testToken(token);
-                        if (!valid) {
-                            this.showToast('Invalid token - check permissions', 'mdi-alert');
-                            return;
-                        }
-                        GITHUB_PAT = token;
-                        localStorage.setItem('github_pat', token);
-                        this.updateTokenIndicator();
-                        tokenModal.classList.remove('show');
-                        setTimeout(() => {
-                            DataManager.syncData(true);
-                            this.startSyncInterval();
-                        }, 1000);
-                        this.showToast('Token saved', 'mdi-check');
-                    }
-                });
-                clearTokenBtn.addEventListener('click', () => {
-                    GITHUB_PAT = '';
-                    localStorage.removeItem('github_pat');
-                    this.updateTokenIndicator();
-                    tokenModal.classList.remove('show');
-                    this.showToast('Token cleared', 'mdi-check');
-                });
-                closeTokenModal.addEventListener('click', () => tokenModal.classList.remove('show'));
-                pinBtns.forEach(btn => btn.addEventListener('click', () => {
-                    if (pinInput.value.length < 4) pinInput.value += btn.dataset.value;
-                }));
-                pinBackspace.addEventListener('click', () => pinInput.value = pinInput.value.slice(0, -1));
-                pinEnter.addEventListener('click', () => {
-                    if (hashPin(pinInput.value) === ADMIN_PIN_HASH) {
-                        adminMode = true;
-                        adminToggle.classList.add('active');
-                        addEquipmentBtn.style.display = 'flex';
-                        editEquipmentBtn.style.display = 'flex';
-                        deleteEquipmentBtn.style.display = 'flex';
-                        pinModal.classList.remove('show');
-                        this.showToast('Admin mode activated', 'mdi-shield-check');
-                        // Show change PIN option in admin mode if desired
-                    } else {
-                        pinInput.value = '';
-                        this.showToast('Invalid PIN', 'mdi-lock-alert');
-                    }
-                });
-                closePinModal.addEventListener('click', () => pinModal.classList.remove('show'));
-                // Change PIN listeners
-                newPinBtns.forEach(btn => btn.addEventListener('click', () => {
-                    if (newPinInput.value.length < 4) newPinInput.value += btn.dataset.value;
-                }));
-                newPinBackspace.addEventListener('click', () => newPinInput.value = newPinInput.value.slice(0, -1));
-                newPinEnter.addEventListener('click', () => {
-                    this.changeAdminPin(newPinInput.value);
-                    newPinInput.value = '';
-                    changePinModal.classList.remove('show');
-                });
-                closeChangePinModal.addEventListener('click', () => changePinModal.classList.remove('show'));
-                // Add a button to open change PIN modal, e.g., in admin mode
-                // For simplicity, assume it's triggered from elsewhere or add a button
-                
-                closePanelBtn.addEventListener('click', this.closeDetailPanel.bind(this));
-                addEquipmentBtn.addEventListener('click', () => this.showEquipmentModal());
-                editEquipmentBtn.addEventListener('click', () => {
-                    if (selectedEquipment) this.showEquipmentModal(true, selectedEquipment);
-                });
-                addMaintenanceBtn.addEventListener('click', () => {
-                    if (selectedEquipment) this.showMaintenanceModal();
-                });
-                deleteEquipmentBtn.addEventListener('click', () => {
-                    if (selectedEquipment) this.confirmDeleteEquipment();
-                });
-                saveEquipmentBtn.addEventListener('click', this.saveEquipment.bind(this));
-                cancelEquipmentBtn.addEventListener('click', () => equipmentModal.classList.remove('show'));
-                closeEquipmentModal.addEventListener('click', () => equipmentModal.classList.remove('show'));
-                saveMaintenanceBtn.addEventListener('click', this.saveMaintenanceRecord.bind(this));
-                cancelMaintenanceBtn.addEventListener('click', () => maintenanceModal.classList.remove('show'));
-                closeMaintenanceModal.addEventListener('click', () => maintenanceModal.classList.remove('show'));
-                confirmDeleteBtn.addEventListener('click', this.deleteEquipment.bind(this));
-                cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.remove('show'));
-                closeDeleteModal.addEventListener('click', () => deleteModal.classList.remove('show'));
-                searchInput.addEventListener('input', this.debounce(() => {
-                    clearSearchBtn.style.display = searchInput.value ? 'block' : 'none';
-                    this.optimizedRenderEquipment();
-                }, 300));
-                clearSearchBtn.addEventListener('click', () => {
-                    searchInput.value = '';
-                    clearSearchBtn.style.display = 'none';
-                    this.optimizedRenderEquipment();
-                });
-                categoryFilters.forEach(chip => chip.addEventListener('click', () => {
-                    categoryFilters.forEach(c => c.classList.remove('active'));
-                    chip.classList.add('active');
-                    this.optimizedRenderEquipment();
-                }));
-                sortSelect.addEventListener('change', () => this.optimizedRenderEquipment());
-                quickAddBtn.addEventListener('click', () => this.showEquipmentModal());
-                quickSyncBtn.addEventListener('click', () => DataManager.syncData(true));
-                syncNowBtn.addEventListener('click', () => DataManager.syncData(true));
-                
-                // Export button
-                document.getElementById('exportBtn').addEventListener('click', () => {
-                    const blob = new Blob([JSON.stringify(equipmentData, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'farmdata.json';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    this.showToast('Data exported', 'mdi-check');
-                });
-                
-                // Automatically calculate next service date when maintenance date changes
-                maintenanceDate.addEventListener('change', () => {
-                    if (maintenanceDate.value) {
-                        const nextDate = new Date(maintenanceDate.value);
-                        nextDate.setFullYear(nextDate.getFullYear() + 1);
-                        nextServiceDate.value = nextDate.toISOString().split('T')[0];
-                    }
-                });
-            }
-        };
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => UIManager.init());
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
-    </html>
+                        </html>
