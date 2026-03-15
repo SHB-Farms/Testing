@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Farm Equipment Manager Pro</title>
+    <title>Farm Equipment Manager Pro - Photos</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <style>
@@ -504,15 +504,20 @@
 
         .equipment-item-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 12px;
             margin-bottom: 8px;
+            position: relative;
         }
 
         .equipment-name {
             font-size: 1.05rem;
             font-weight: 600;
             color: var(--primary-dark);
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .equipment-meta {
@@ -953,6 +958,12 @@
         .form-group textarea {
             min-height: 100px;
             resize: vertical;
+        }
+
+        /* File input style */
+        .form-group input[type="file"] {
+            padding: 10px;
+            background: var(--surface);
         }
 
         .modal-footer {
@@ -1589,6 +1600,13 @@
             </div>
             
             <div class="panel-content">
+                <!-- NEW PHOTO SECTION -->
+                <div class="detail-section">
+                    <h3><i class="mdi mdi-image"></i> Equipment Photo</h3>
+                    <div id="detailPhoto" style="text-align:center; padding:20px; background:var(--background); border-radius:var(--radius); min-height:180px;">
+                    </div>
+                </div>
+
                 <div class="detail-section">
                     <h3><i class="mdi mdi-card-account-details-outline"></i> Basic Information</h3>
                     <div class="detail-row">
@@ -1610,14 +1628,6 @@
                     <div class="detail-row">
                         <div class="detail-label">Status</div>
                         <div class="detail-value" id="detailStatus"></div>
-                    </div>
-                </div>
-                
-                <!-- Photo Section -->
-                <div class="detail-section" id="photoSection" style="display:none;">
-                    <h3><i class="mdi mdi-camera"></i> Photo</h3>
-                    <div id="detailImage" style="text-align:center; margin:15px 0;">
-                        <!-- image inserted by JS -->
                     </div>
                 </div>
                 
@@ -1783,17 +1793,6 @@
                     <textarea id="equipNotes" class="form-control" placeholder="Enter notes about this equipment"></textarea>
                 </div>
                 
-                <!-- Photo upload field -->
-                <div class="form-group">
-                    <label for="equipImage"><i class="mdi mdi-camera"></i> Equipment Photo (optional)</label>
-                    <input type="file" id="equipImage" class="form-control" accept="image/*">
-                    <small class="text-light">JPG/PNG • max ~5 MB recommended</small>
-                    <div id="imagePreview" style="margin-top:10px; max-width:280px; display:none;">
-                        <img id="previewImg" style="width:100%; border-radius:var(--radius-sm); box-shadow:var(--shadow-light);">
-                        <button id="removeImageBtn" class="btn btn-outline" style="margin-top:8px; font-size:0.85rem;">Remove Photo</button>
-                    </div>
-                </div>
-                
                 <div class="form-row">
                     <div class="form-group">
                         <label for="lastService"><i class="mdi mdi-calendar-check"></i> Last Service Date</label>
@@ -1802,6 +1801,17 @@
                     <div class="form-group">
                         <label for="nextService"><i class="mdi mdi-calendar-clock"></i> Next Service Date</label>
                         <input type="date" id="nextService" class="form-control">
+                    </div>
+                </div>
+
+                <!-- NEW IMAGE UPLOAD -->
+                <div class="form-group">
+                    <label for="equipImageInput"><i class="mdi mdi-camera"></i> Equipment Photo (optional)</label>
+                    <input type="file" id="equipImageInput" accept="image/*" class="form-control">
+                    <div id="imagePreviewContainer" style="display: none; margin-top: 12px; text-align: center;">
+                        <img id="imagePreview" style="max-width: 280px; max-height: 200px; border-radius: 12px; box-shadow: var(--shadow);">
+                        <br>
+                        <button id="removeImageBtn" class="btn btn-danger" style="margin-top: 8px; font-size: 0.85rem;">Remove Photo</button>
                     </div>
                 </div>
             </div>
@@ -1917,9 +1927,9 @@
     </div>
 
     <script>
-        // GitHub-based data storage
+        // GitHub-based data storage - CHANGED TO YOUR TESTING REPO
         const GITHUB_USER = "shb-farms";
-        const GITHUB_REPO = "Farm-Log";
+        const GITHUB_REPO = "Testing";           // ←←← DATA NOW GOES HERE
         const DATA_PATH = "farmdata.json";
         const GITHUB_API = "https://api.github.com";
         
@@ -1945,6 +1955,9 @@
         // Track maintenance record being edited
         let maintenanceId = null;
         
+        // NEW: Image handling
+        let currentImageBase64 = null;
+
         // Saving indicator variables
         let savingTimer = null;
         let savingProgressInterval = null;
@@ -2011,10 +2024,10 @@
         const cancelEquipmentBtn = document.getElementById('cancelEquipmentBtn');
         const closeEquipmentModal = document.getElementById('closeEquipmentModal');
 
-        // Photo elements
-        const equipImageInput = document.getElementById('equipImage');
+        // NEW IMAGE ELEMENTS
+        const equipImageInput = document.getElementById('equipImageInput');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
         const imagePreview = document.getElementById('imagePreview');
-        const previewImg = document.getElementById('previewImg');
         const removeImageBtn = document.getElementById('removeImageBtn');
 
         // Maintenance modal elements
@@ -2083,7 +2096,7 @@
         function isMaintenanceOverdue(equip) {
             if (!equip.nextMaintenance) return false;
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Reset time part for accurate comparison
+            today.setHours(0, 0, 0, 0);
             
             const nextDate = new Date(equip.nextMaintenance);
             nextDate.setHours(0, 0, 0, 0);
@@ -2147,71 +2160,44 @@
         }
 
         function showSavingIndicator() {
-            // Clear any existing timers
-            if (savingTimer) {
-                clearTimeout(savingTimer);
-                savingTimer = null;
-            }
-            if (savingProgressInterval) {
-                clearInterval(savingProgressInterval);
-                savingProgressInterval = null;
-            }
+            if (savingTimer) clearTimeout(savingTimer);
+            if (savingProgressInterval) clearInterval(savingProgressInterval);
             
-            // Show the indicator
             savingIndicator.classList.add('active');
             savingProgressBar.style.width = '0%';
             savingIndicatorStartTime = Date.now();
             
-            // Animate progress bar (10 seconds)
-            const totalTime = 10000; // 10 seconds
-            const interval = 50; // Update every 50ms
-            const steps = totalTime / interval;
-            const increment = 100 / steps;
+            const totalTime = 10000;
+            const interval = 50;
+            const increment = 100 / (totalTime / interval);
             
             savingProgressInterval = setInterval(() => {
                 const elapsed = Date.now() - savingIndicatorStartTime;
                 const progress = Math.min(100, (elapsed / totalTime) * 100);
                 savingProgressBar.style.width = `${progress}%`;
-                
-                if (progress >= 100) {
-                    clearInterval(savingProgressInterval);
-                    savingProgressInterval = null;
-                }
+                if (progress >= 100) clearInterval(savingProgressInterval);
             }, interval);
         }
         
         function hideSavingIndicator() {
-            // Calculate how long the indicator has been visible
             const elapsed = Date.now() - savingIndicatorStartTime;
-            const minDisplayTime = 10000; // Minimum 10 seconds
+            const minDisplayTime = 10000;
             
             if (elapsed < minDisplayTime) {
-                // Wait for the remaining time
-                const remaining = minDisplayTime - elapsed;
                 savingTimer = setTimeout(() => {
                     savingIndicator.classList.remove('active');
-                    savingTimer = null;
-                }, remaining);
+                }, minDisplayTime - elapsed);
             } else {
-                // Hide immediately if we've already shown for min time
                 savingIndicator.classList.remove('active');
-            }
-            
-            // Clear progress interval if it exists
-            if (savingProgressInterval) {
-                clearInterval(savingProgressInterval);
-                savingProgressInterval = null;
             }
         }
 
         async function fetchRemoteData() {
-            if (!GITHUB_PAT) {
-                throw new Error('No GitHub token configured');
-            }
+            if (!GITHUB_PAT) throw new Error('No GitHub token configured');
 
             try {
                 const metaResponse = await fetch(
-                    `${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${DATA_PATH}`,
+                    `\( {GITHUB_API}/repos/ \){GITHUB_USER}/\( {GITHUB_REPO}/contents/ \){DATA_PATH}`,
                     { headers: { "Authorization": `Bearer ${GITHUB_PAT}` } }
                 );
 
@@ -2248,7 +2234,7 @@
 
             try {
                 const bodyData = {
-                    message: "Update equipment data",
+                    message: "Update equipment data (with photos)",
                     content: btoa(unescape(encodeURIComponent(content))),
                     branch: "main"
                 };
@@ -2256,7 +2242,7 @@
                 if (fileSHA) bodyData.sha = fileSHA;
 
                 const response = await fetch(
-                    `${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${DATA_PATH}`,
+                    `\( {GITHUB_API}/repos/ \){GITHUB_USER}/\( {GITHUB_REPO}/contents/ \){DATA_PATH}`,
                     {
                         method: "PUT",
                         headers: {
@@ -2273,16 +2259,14 @@
                     lastSyncTimestamp = Date.now();
                     return true;
                 } else {
-                    console.error('GitHub API error:', result);
                     throw new Error(result.message || 'Failed to push data');
                 }
             } catch (error) {
                 console.error('Push error:', error);
                 if (error.message.includes('409')) {
-                    // Conflict - refetch SHA and retry
                     const remoteData = await fetchRemoteData();
                     fileSHA = remoteData.sha;
-                    return await pushDataToGitHub(); // Retry
+                    return await pushDataToGitHub();
                 }
                 throw error;
             }
@@ -2294,17 +2278,13 @@
                 return false;
             }
 
-            // Show saving indicator
             showSavingIndicator();
-            
-            // Show sync status bar
             syncStatusBar.classList.add('active');
             syncMessage.textContent = "Saving changes to SHB Server...";
             progressBar.style.width = '0%';
             updateSyncStatus('syncing', 'Saving changes...');
             
             try {
-                // Simulate progress
                 let progress = 0;
                 const progressInterval = setInterval(() => {
                     progress += 10;
@@ -2325,12 +2305,11 @@
                         progressBar.style.width = '0%';
                     }, 2000);
                     
-                    // Schedule a sync shortly after save to get latest changes
                     setTimeout(syncData, 5000);
                     return true;
                 } else {
                     updateSyncStatus('error', 'Save failed!');
-                    syncMessage.textContent = "Failed to save changes. Please check your token.";
+                    syncMessage.textContent = "Failed to save changes.";
                     return false;
                 }
             } catch (error) {
@@ -2339,7 +2318,6 @@
                 syncMessage.textContent = "Error: " + error.message;
                 return false;
             } finally {
-                // Ensure saving indicator is hidden after operation
                 hideSavingIndicator();
             }
         }
@@ -2347,6 +2325,23 @@
         function showTokenModal() {
             tokenInput.value = GITHUB_PAT || '';
             tokenModal.classList.add('show');
+        }
+
+        // NEW: Image upload handler
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showToast('Please select a valid image file', 'mdi-alert');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                currentImageBase64 = event.target.result;
+                imagePreview.src = currentImageBase64;
+                imagePreviewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
         }
 
         function showEquipmentModal(editMode = false, equipment = null) {
@@ -2364,12 +2359,14 @@
                 lastService.value = equipment.lastMaintenance || '';
                 nextService.value = equipment.nextMaintenance || '';
 
-                // image handling
-                if (equipment.imageData) {
-                    previewImg.src = equipment.imageData;
-                    imagePreview.style.display = 'block';
+                // Handle existing image
+                if (equipment.image) {
+                    currentImageBase64 = equipment.image;
+                    imagePreview.src = equipment.image;
+                    imagePreviewContainer.style.display = 'block';
                 } else {
-                    imagePreview.style.display = 'none';
+                    currentImageBase64 = null;
+                    imagePreviewContainer.style.display = 'none';
                 }
             } else {
                 equipmentModalTitle.textContent = 'Add New Equipment';
@@ -2383,32 +2380,12 @@
                 equipNotes.value = '';
                 lastService.value = '';
                 nextService.value = '';
-                imagePreview.style.display = 'none';
+                currentImageBase64 = null;
+                imagePreviewContainer.style.display = 'none';
             }
+            equipImageInput.value = '';
             equipmentModal.classList.add('show');
         }
-
-        // Image preview & remove
-        equipImageInput.addEventListener('change', () => {
-            const file = equipImageInput.files[0];
-            if (!file) return;
-            if (file.size > 5 * 1024 * 1024) {
-                showToast('Image too large (max 5 MB)', 'mdi-alert');
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                previewImg.src = e.target.result;
-                imagePreview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        });
-
-        removeImageBtn.addEventListener('click', () => {
-            previewImg.src = '';
-            imagePreview.style.display = 'none';
-            equipImageInput.value = '';
-        });
 
         async function saveEquipment() {
             const name = equipName.value.trim();
@@ -2419,26 +2396,19 @@
             const notes = equipNotes.value;
             const lastServiceDate = lastService.value;
             const nextServiceDate = nextService.value;
-
-            if (!name || !id) {
-                showToast('Name and ID are required', 'mdi-alert');
+            const image = currentImageBase64 || (equipmentModalTitle.textContent.includes('Edit') && selectedEquipment ? selectedEquipment.image || '' : '');
+            
+            if (!name) {
+                showToast('Please enter a name', 'mdi-alert');
                 return;
             }
-
-            let imageData = null;
-            if (equipImageInput.files[0]) {
-                const file = equipImageInput.files[0];
-                imageData = await new Promise(resolve => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.readAsDataURL(file);
-                });
-            } else if (selectedEquipment && selectedEquipment.imageData && imagePreview.style.display !== 'none') {
-                imageData = selectedEquipment.imageData; // keep existing image on edit
+            if (!id) {
+                showToast('Please enter an ID', 'mdi-alert');
+                return;
             }
-
+            
             const isEdit = equipmentModalTitle.textContent.includes('Edit');
-
+            
             if (isEdit) {
                 const index = equipmentData.findIndex(e => e.id === selectedEquipment.id);
                 if (index !== -1) {
@@ -2457,12 +2427,10 @@
                         notes,
                         lastMaintenance: lastServiceDate,
                         nextMaintenance: nextServiceDate,
-                        imageData,
+                        image: image,
                         updatedAt: new Date().toISOString()
                     };
-                    // Update the selected equipment reference
                     selectedEquipment = equipmentData[index];
-                    // Refresh detail panel if open
                     if (detailPanel.classList.contains('open')) {
                         openDetailPanel(selectedEquipment);
                     }
@@ -2483,15 +2451,14 @@
                     notes,
                     lastMaintenance: lastServiceDate,
                     nextMaintenance: nextServiceDate,
+                    image: image,
                     maintenanceHistory: [],
-                    imageData,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 });
                 showToast('Equipment added', 'mdi-check');
             }
             
-            // Clear cache to force refresh
             cachedFilteredEquipment = [];
             
             const success = await saveChanges();
@@ -2499,7 +2466,6 @@
                 optimizedRenderEquipment();
                 calculateStats();
                 equipmentModal.classList.remove('show');
-                equipImageInput.value = ''; // reset input
             }
         }
 
@@ -2528,7 +2494,6 @@
                 maintenanceId = null;
                 nextServiceDate.style.display = 'block';
                 
-                // Calculate next service date (1 year from today)
                 const nextDate = new Date();
                 nextDate.setFullYear(nextDate.getFullYear() + 1);
                 nextServiceDate.value = nextDate.toISOString().split('T')[0];
@@ -2547,13 +2512,8 @@
             const details = maintenanceDetails.value.trim();
             const nextServiceValue = nextServiceDate.value;
             
-            if (!date) {
-                showToast('Please select a date', 'mdi-alert');
-                return;
-            }
-            
-            if (!type) {
-                showToast('Please enter maintenance type', 'mdi-alert');
+            if (!date || !type) {
+                showToast('Date and type are required', 'mdi-alert');
                 return;
             }
             
@@ -2570,29 +2530,19 @@
             
             const index = equipmentData.findIndex(e => e.id === selectedEquipment.id);
             if (index !== -1) {
-                if (!equipmentData[index].maintenanceHistory) {
-                    equipmentData[index].maintenanceHistory = [];
-                }
+                if (!equipmentData[index].maintenanceHistory) equipmentData[index].maintenanceHistory = [];
                 
                 if (maintenanceId) {
                     const recordIndex = equipmentData[index].maintenanceHistory.findIndex(r => r.id === maintenanceId);
-                    if (recordIndex !== -1) {
-                        equipmentData[index].maintenanceHistory[recordIndex] = record;
-                        showToast('Maintenance record updated', 'mdi-check');
-                    }
+                    if (recordIndex !== -1) equipmentData[index].maintenanceHistory[recordIndex] = record;
                 } else {
                     equipmentData[index].maintenanceHistory.unshift(record);
-                    showToast('Maintenance record added', 'mdi-check');
-                    
-                    // Update next service date to 1 year from maintenance date
                     equipmentData[index].nextMaintenance = nextServiceValue;
                 }
                 
-                // Update last service date to this maintenance date
                 equipmentData[index].lastMaintenance = date;
                 equipmentData[index].updatedAt = new Date().toISOString();
                 
-                // Clear cache to force refresh
                 cachedFilteredEquipment = [];
                 
                 const success = await saveChanges();
@@ -2616,7 +2566,6 @@
             const index = equipmentData.findIndex(e => e.id === selectedEquipment.id);
             if (index !== -1) {
                 equipmentData.splice(index, 1);
-                // Clear cache to force refresh
                 cachedFilteredEquipment = [];
                 const success = await saveChanges();
                 if (success) {
@@ -2624,8 +2573,6 @@
                     calculateStats();
                     closeDetailPanel();
                     showToast('Equipment deleted', 'mdi-check');
-                } else {
-                    showToast('Failed to delete. Check token!', 'mdi-alert');
                 }
             }
             deleteModal.classList.remove('show');
@@ -2640,19 +2587,13 @@
             
             try {
                 const remote = await fetchRemoteData();
-                
-                // Clear cache to force refresh
                 cachedFilteredEquipment = [];
                 
-                // Conflict resolution
                 if (force || remote.timestamp > lastSyncTimestamp) {
-                    // Merge remote changes with local changes
                     const mergedEquipment = mergeEquipmentData(equipmentData, remote.equipment);
-                    
                     equipmentData = mergedEquipment;
                     fileSHA = remote.sha;
                     lastSyncTimestamp = remote.timestamp;
-                    
                     showToast('Data synced successfully', 'mdi-cloud-check');
                 } else {
                     showToast('Data is up to date', 'mdi-cloud-check');
@@ -2662,19 +2603,12 @@
             } catch (error) {
                 console.error('Sync error:', error);
                 if (error.message.includes('404')) {
-                    // File doesn't exist yet - initialize it
                     equipmentData = [];
-                    // Clear cache to force refresh
                     cachedFilteredEquipment = [];
                     const pushSuccess = await pushDataToGitHub();
-                    if (pushSuccess) {
-                        updateSyncStatus('synced', 'Initialized new data file');
-                    } else {
-                        updateSyncStatus('error', 'Failed to initialize data');
-                    }
+                    if (pushSuccess) updateSyncStatus('synced', 'Initialized new data file');
                 } else {
                     updateSyncStatus('error', 'Sync failed: ' + error.message);
-                    showToast('Sync failed: ' + error.message, 'mdi-alert');
                 }
             } finally {
                 syncInProgress = false;
@@ -2685,39 +2619,29 @@
         }
 
         function mergeEquipmentData(localData, remoteData) {
-            // Create a map of remote equipment by ID for quick lookup
             const remoteMap = new Map(remoteData.map(item => [item.id, item]));
             const mergedData = [];
             
-            // First process all local items
             for (const localItem of localData) {
                 const remoteItem = remoteMap.get(localItem.id);
-                
                 if (remoteItem) {
-                    // Item exists in both local and remote - merge them
                     const mergedItem = {
-                        ...remoteItem, // Start with remote data
-                        ...localItem,  // Override with local changes
-                        // Special handling for maintenance history
+                        ...remoteItem,
+                        ...localItem,
                         maintenanceHistory: mergeMaintenanceHistory(
                             remoteItem.maintenanceHistory || [],
                             localItem.maintenanceHistory || []
                         )
                     };
-                    
                     mergedData.push(mergedItem);
-                    remoteMap.delete(localItem.id); // Remove from map to mark as processed
+                    remoteMap.delete(localItem.id);
                 } else {
-                    // Item only exists locally - keep it
                     mergedData.push(localItem);
                 }
             }
             
-            // Add any remaining remote items that weren't in local data
             for (const remoteItem of remoteData) {
-                if (remoteMap.has(remoteItem.id)) {
-                    mergedData.push(remoteItem);
-                }
+                if (remoteMap.has(remoteItem.id)) mergedData.push(remoteItem);
             }
             
             return mergedData;
@@ -2725,21 +2649,9 @@
 
         function mergeMaintenanceHistory(remoteHistory, localHistory) {
             const historyMap = new Map();
-            
-            // Add all remote history first
-            for (const record of remoteHistory) {
-                historyMap.set(record.id, record);
-            }
-            
-            // Add or overwrite with local history
-            for (const record of localHistory) {
-                historyMap.set(record.id, record);
-            }
-            
-            // Convert back to array and sort by date (newest first)
-            return Array.from(historyMap.values()).sort((a, b) => {
-                return new Date(b.date) - new Date(a.date);
-            });
+            for (const record of remoteHistory) historyMap.set(record.id, record);
+            for (const record of localHistory) historyMap.set(record.id, record);
+            return Array.from(historyMap.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
         }
 
         function toggleTheme() {
@@ -2750,9 +2662,7 @@
         }
 
         function calculateStats() {
-            for (const category in categoryCounts) {
-                categoryCounts[category].textContent = '0';
-            }
+            for (const category in categoryCounts) categoryCounts[category].textContent = '0';
             
             equipmentData.forEach(equip => {
                 if (categoryCounts[equip.category]) {
@@ -2765,12 +2675,7 @@
             stats.total.textContent = equipmentData.length;
             stats.overdue.textContent = equipmentData.filter(isMaintenanceOverdue).length;
             
-            // Hide welcome message if we have equipment
-            if (equipmentData.length > 0) {
-                welcomeMessage.style.display = 'none';
-            } else {
-                welcomeMessage.style.display = 'block';
-            }
+            welcomeMessage.style.display = equipmentData.length > 0 ? 'none' : 'block';
         }
 
         function debounce(func, wait) {
@@ -2790,22 +2695,15 @@
             const activeCategory = document.querySelector('.category-chip.active').dataset.category;
             const sortValue = sortSelect.value;
             
-            if (searchTerm === lastSearchTerm && 
-                activeCategory === lastActiveCategory && 
-                sortValue === lastSortValue &&
-                cachedFilteredEquipment.length > 0) {
+            if (searchTerm === lastSearchTerm && activeCategory === lastActiveCategory && sortValue === lastSortValue && cachedFilteredEquipment.length > 0) {
                 return cachedFilteredEquipment;
             }
             
             const loadingIndicator = document.querySelector('.search-loading');
             loadingIndicator.classList.add('active');
             
-            const startTime = performance.now();
             let filtered = equipmentData;
-            
-            if (activeCategory !== 'all') {
-                filtered = filtered.filter(equip => equip.category === activeCategory);
-            }
+            if (activeCategory !== 'all') filtered = filtered.filter(equip => equip.category === activeCategory);
             
             if (searchTerm) {
                 filtered = filtered.filter(equip => {
@@ -2825,19 +2723,11 @@
             lastActiveCategory = activeCategory;
             lastSortValue = sortValue;
             
-            const duration = performance.now() - startTime;
-            console.log(`Filtered ${filtered.length} items in ${duration.toFixed(2)}ms`);
             loadingIndicator.classList.remove('active');
             return filtered;
         }
 
         function optimizedSortEquipment(equipment, sortValue) {
-            if (sortValue === lastSortValue && 
-                equipment === cachedFilteredEquipment && 
-                cachedFilteredEquipment.length > 0) {
-                return equipment;
-            }
-            
             switch(sortValue) {
                 case 'name-asc': return equipment.sort((a, b) => a.name.localeCompare(b.name));
                 case 'name-desc': return equipment.sort((a, b) => b.name.localeCompare(a.name));
@@ -2862,7 +2752,7 @@
                             <i class="mdi mdi-magnify-close"></i>
                         </div>
                         <h3>No Equipment Found</h3>
-                        <p>Try changing your filters or search term to find what you're looking for.</p>
+                        <p>Try changing your filters or search term.</p>
                         <button class="btn btn-outline" id="resetFiltersBtn">
                             <i class="mdi mdi-filter-remove"></i> Reset Filters
                         </button>
@@ -2878,15 +2768,18 @@
                 item.className = 'equipment-item';
                 
                 const statusIndicator = equip.status ? 
-                    `<span class="status-indicator" style="background-color: ${getStatusColor(equip.status)}"></span>${getStatusText(equip.status)}` : 
-                    '';
+                    `<span class="status-indicator" style="background-color: \( {getStatusColor(equip.status)}"></span> \){getStatusText(equip.status)}` : '';
                 
+                // UPDATED HEADER WITH PHOTO THUMBNAIL
                 item.innerHTML = `
-                    <div class="equipment-item-header">
-                        ${equip.imageData ? 
-                            `<img src="${equip.imageData}" style="width:100%; height:140px; object-fit:cover; border-radius:var(--radius); margin-bottom:12px;">` : 
-                            ''}
-                        <div class="equipment-name">${equip.name}</div>
+                    <div class="equipment-item-header" style="display:flex; align-items:center; gap:12px; position:relative;">
+                        ${equip.image ? 
+                            `<img src="\( {equip.image}" style="width:55px;height:55px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt=" \){equip.name}">` 
+                            : `<div style="width:55px;height:55px;background:var(--background);border-radius:8px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="mdi mdi-image-off" style="font-size:26px;color:var(--text-light);"></i></div>`
+                        }
+                        <div style="flex:1; min-width:0;">
+                            <div class="equipment-name">${equip.name}</div>
+                        </div>
                         ${isMaintenanceOverdue(equip) ? '<div class="overdue-badge"><i class="mdi mdi-alert"></i> MAINTENANCE DUE</div>' : ''}
                     </div>
                     <div class="equipment-id">${equip.id}</div>
@@ -2927,28 +2820,30 @@
             document.getElementById('detailCategory').textContent = equip.category.charAt(0).toUpperCase() + equip.category.slice(1);
             document.getElementById('detailYear').textContent = equip.year || 'N/A';
             document.getElementById('detailStatus').innerHTML = equip.status ? 
-                `<span class="status-indicator" style="background-color: ${getStatusColor(equip.status)}"></span>${getStatusText(equip.status)}` : 
-                '';
+                `<span class="status-indicator" style="background-color: \( {getStatusColor(equip.status)}"></span> \){getStatusText(equip.status)}` : '';
             document.getElementById('detailLastService').textContent = formatDate(equip.lastMaintenance);
             document.getElementById('detailNextService').textContent = formatDate(equip.nextMaintenance);
             document.getElementById('detailNotes').textContent = equip.notes || 'No notes available';
             
-            // show photo
-            const photoSection = document.getElementById('photoSection');
-            const detailImage = document.getElementById('detailImage');
-            if (equip.imageData) {
-                detailImage.innerHTML = `<img src="${equip.imageData}" style="max-width:100%; border-radius:var(--radius); box-shadow:var(--shadow);">`;
-                photoSection.style.display = 'block';
-            } else {
-                photoSection.style.display = 'none';
-            }
-            
             const warningElement = document.getElementById('maintenanceWarning');
             warningElement.style.display = isMaintenanceOverdue(equip) ? 'flex' : 'none';
+            
+            // NEW PHOTO DISPLAY
+            const detailPhoto = document.getElementById('detailPhoto');
+            if (equip.image) {
+                detailPhoto.innerHTML = `<img src="\( {equip.image}" style="max-width:100%; max-height:320px; object-fit:contain; border-radius:var(--radius); box-shadow:var(--shadow);" alt=" \){equip.name} Photo">`;
+            } else {
+                detailPhoto.innerHTML = `
+                    <div style="font-size:4rem; color:var(--text-light); opacity:0.6; padding:30px 0;">
+                        <i class="mdi mdi-image-off"></i>
+                    </div>
+                    <p style="color:var(--text-light);">No photo available</p>
+                `;
+            }
+            
             renderMaintenanceHistory(equip.maintenanceHistory || []);
             detailPanel.classList.add('open');
             
-            // Show admin buttons if in admin mode
             if (adminMode) {
                 editEquipmentBtn.style.display = 'flex';
                 deleteEquipmentBtn.style.display = 'flex';
@@ -2974,14 +2869,12 @@
                     `<button class="edit-maintenance" data-id="${record.id}">
                         <i class="mdi mdi-pencil"></i>
                     </button>` : '';
-                    
-                // Add usage info if available
+                
                 let usageInfo = '';
                 if (record.mileage || record.hours) {
                     usageInfo = `<div class="history-usage">`;
                     if (record.mileage) usageInfo += `<span>Mileage: ${record.mileage.toLocaleString()} miles</span>`;
-                    if (record.mileage && record.hours) usageInfo += ` | `;
-                    if (record.hours) usageInfo += `<span>Hours: ${record.hours.toLocaleString()} hrs</span>`;
+                    if (record.hours) usageInfo += ` | <span>Hours: ${record.hours.toLocaleString()} hrs</span>`;
                     usageInfo += `</div>`;
                 }
                 
@@ -3017,9 +2910,7 @@
         }
 
         function startSyncInterval() {
-            if (syncIntervalId) {
-                clearInterval(syncIntervalId);
-            }
+            if (syncIntervalId) clearInterval(syncIntervalId);
             syncIntervalId = setInterval(() => syncData(false), syncInterval);
         }
 
@@ -3030,7 +2921,7 @@
             document.documentElement.setAttribute('data-theme', savedTheme);
             
             if (GITHUB_PAT) {
-                await syncData(true); // Force sync on init
+                await syncData(true);
                 startSyncInterval();
             } else {
                 updateSyncStatus('error', 'No GitHub token configured');
@@ -3051,7 +2942,7 @@
                     updateTokenIndicator();
                     tokenModal.classList.remove('show');
                     setTimeout(() => {
-                        syncData(true); // Force sync after token save
+                        syncData(true);
                         startSyncInterval();
                     }, 1000);
                     showToast('Token saved', 'mdi-check');
@@ -3065,6 +2956,7 @@
                 showToast('Token cleared', 'mdi-check');
             });
             closeTokenModal.addEventListener('click', () => tokenModal.classList.remove('show'));
+            
             pinBtns.forEach(btn => btn.addEventListener('click', () => {
                 if (pinInput.value.length < 4) pinInput.value += btn.dataset.value;
             }));
@@ -3104,6 +2996,7 @@
             confirmDeleteBtn.addEventListener('click', deleteEquipment);
             cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.remove('show'));
             closeDeleteModal.addEventListener('click', () => deleteModal.classList.remove('show'));
+            
             searchInput.addEventListener('input', debounce(() => {
                 clearSearchBtn.style.display = searchInput.value ? 'block' : 'none';
                 optimizedRenderEquipment();
@@ -3120,16 +3013,24 @@
             }));
             sortSelect.addEventListener('change', () => optimizedRenderEquipment());
             quickAddBtn.addEventListener('click', () => showEquipmentModal());
-            quickSyncBtn.addEventListener('click', () => syncData(true)); // Force sync
-            syncNowBtn.addEventListener('click', () => syncData(true)); // Force sync
+            quickSyncBtn.addEventListener('click', () => syncData(true));
+            syncNowBtn.addEventListener('click', () => syncData(true));
             
-            // Automatically calculate next service date when maintenance date changes
             maintenanceDate.addEventListener('change', () => {
                 if (maintenanceDate.value) {
                     const nextDate = new Date(maintenanceDate.value);
                     nextDate.setFullYear(nextDate.getFullYear() + 1);
                     nextServiceDate.value = nextDate.toISOString().split('T')[0];
                 }
+            });
+
+            // NEW IMAGE LISTENERS
+            equipImageInput.addEventListener('change', handleImageUpload);
+            removeImageBtn.addEventListener('click', () => {
+                currentImageBase64 = null;
+                imagePreviewContainer.style.display = 'none';
+                equipImageInput.value = '';
+                showToast('Photo removed', 'mdi-check');
             });
         }
 
