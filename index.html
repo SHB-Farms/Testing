@@ -71,6 +71,12 @@
             transform: translateY(0);
         }
 
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         #scanBtn {
             background: var(--primary);
             font-size: 2.8rem;
@@ -113,6 +119,13 @@
             margin: 2rem 0;
         }
 
+        .scan-message {
+            font-size: 2rem;
+            color: #94a3b8;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
         #scanScreen,
         #controlScreen {
             width: 100%;
@@ -120,14 +133,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-
-        /*
-         * IMPORTANT:
-         * The scan screen is the default screen.
-         */
-        #scanScreen {
-            display: flex;
         }
 
         #controlScreen {
@@ -139,13 +144,6 @@
             padding: 2rem 5rem;
             font-size: 2.2rem;
             background: var(--danger);
-        }
-
-        .scan-message {
-            font-size: 2rem;
-            color: #94a3b8;
-            text-align: center;
-            margin-top: 1rem;
         }
 
         .modal {
@@ -236,31 +234,44 @@
 <body>
 
     <!-- ========================================================= -->
-    <!-- SCREEN 1: SCANNING / CONNECTION                          -->
+    <!-- SCREEN 1: AUTOMATIC SCANNING / CONNECTION                 -->
     <!-- ========================================================= -->
 
     <div id="scanScreen">
 
         <div class="header">
-            <h1>SHB Door Control v1.9</h1>
 
-            <div class="connected-door" id="doorStatusScan">
+            <h1>SHB Door Control v2.0</h1>
+
+            <div
+                class="connected-door"
+                id="doorStatusScan"
+            >
                 Not connected
             </div>
 
-            <div class="scan-message" id="scanMessage">
-                READY TO SCAN FOR DOORS
+            <div
+                class="scan-message"
+                id="scanMessage"
+            >
+                LOOKING FOR AUTHORIZED DOORS...
             </div>
+
         </div>
+
+        <!-- Backup button.
+             This is only needed when a door has never been
+             authorized by this browser, or if automatic
+             reconnection cannot find it. -->
 
         <div class="button-group">
 
             <button
                 class="control-btn"
                 id="scanBtn"
-                onclick="scanDoors()"
+                onclick="manualScanDoors()"
             >
-                SCAN DOORS
+                SCAN / ADD DOOR
             </button>
 
         </div>
@@ -269,7 +280,7 @@
 
 
     <!-- ========================================================= -->
-    <!-- SCREEN 2: DOOR OPERATIONS                                 -->
+    <!-- SCREEN 2: OPERATIONS                                      -->
     <!-- ========================================================= -->
 
     <div id="controlScreen">
@@ -366,6 +377,8 @@
                 type="password"
                 id="passcodeInput"
                 maxlength="4"
+                inputmode="numeric"
+                autocomplete="off"
                 placeholder="Enter 4-digit code"
             >
 
@@ -418,6 +431,12 @@
 
         let selectedDevice = null;
 
+        let automaticScanRunning = false;
+
+        let reconnectTimer = null;
+
+        let disconnectingManually = false;
+
 
         // =========================================================
         // DOOR PASSCODES
@@ -442,36 +461,33 @@
 
 
         // =========================================================
+        // CHECK VALID DOOR NAME
+        // =========================================================
+
+        function isValidDoorName(name) {
+
+            return /^D([1-9]|[1-9][0-9])$/.test(
+                name || ''
+            );
+
+        }
+
+
+        // =========================================================
         // SHOW SCAN SCREEN
         // =========================================================
 
         function showScanScreen() {
 
-            document.getElementById('scanScreen').style.display = 'flex';
+            document.getElementById(
+                'scanScreen'
+            ).style.display = 'flex';
 
-            document.getElementById('controlScreen').style.display = 'none';
-
-            document.getElementById('scanMessage').textContent =
-                'READY TO SCAN FOR DOORS';
+            document.getElementById(
+                'controlScreen'
+            ).style.display = 'none';
 
             updateUI();
-
-            /*
-             * Put the keyboard focus on SCAN DOORS.
-             * This makes the page ready for the operator
-             * immediately after opening it.
-             */
-
-            setTimeout(() => {
-
-                const scanButton =
-                    document.getElementById('scanBtn');
-
-                if (scanButton) {
-                    scanButton.focus();
-                }
-
-            }, 100);
 
         }
 
@@ -482,11 +498,31 @@
 
         function showControlScreen() {
 
-            document.getElementById('scanScreen').style.display =
-                'none';
+            document.getElementById(
+                'scanScreen'
+            ).style.display = 'none';
 
-            document.getElementById('controlScreen').style.display =
-                'flex';
+            document.getElementById(
+                'controlScreen'
+            ).style.display = 'flex';
+
+        }
+
+
+        // =========================================================
+        // SET SCAN MESSAGE
+        // =========================================================
+
+        function setScanMessage(message) {
+
+            const element =
+                document.getElementById('scanMessage');
+
+            if (element) {
+
+                element.textContent = message;
+
+            }
 
         }
 
@@ -502,23 +538,31 @@
             const doorName =
                 device.name || 'Unknown';
 
-            document.getElementById('modalTitle').textContent =
+            document.getElementById(
+                'modalTitle'
+            ).textContent =
                 `Enter Passcode for ${doorName}`;
 
-            document.getElementById('passcodeModal').style.display =
-                'flex';
+            document.getElementById(
+                'passcodeModal'
+            ).style.display = 'flex';
 
-            document.getElementById('passcodeInput').value = '';
+            document.getElementById(
+                'passcodeInput'
+            ).value = '';
 
-            document.getElementById('passcodeInput').focus();
+            document.getElementById(
+                'passcodeInput'
+            ).focus();
 
         }
 
 
         function closePasscodeModal() {
 
-            document.getElementById('passcodeModal').style.display =
-                'none';
+            document.getElementById(
+                'passcodeModal'
+            ).style.display = 'none';
 
             selectedDevice = null;
 
@@ -527,6 +571,8 @@
                 true
             );
 
+            showScanScreen();
+
         }
 
 
@@ -534,13 +580,22 @@
         // VERIFY PASSCODE
         // =========================================================
 
-        function verifyPasscode() {
+        async function verifyPasscode() {
+
+            if (!selectedDevice) {
+
+                return;
+
+            }
+
 
             const input =
-                document.getElementById('passcodeInput').value;
+                document.getElementById(
+                    'passcodeInput'
+                ).value;
 
             const doorName =
-                selectedDevice?.name || 'Unknown';
+                selectedDevice.name || 'Unknown';
 
             const correctPasscode =
                 DOOR_PASSCODES[doorName] !== undefined
@@ -557,7 +612,11 @@
                     'passcodeModal'
                 ).style.display = 'none';
 
-                connectToDoor(selectedDevice);
+                const device = selectedDevice;
+
+                selectedDevice = null;
+
+                await connectToDoor(device);
 
             }
             else {
@@ -571,47 +630,262 @@
                     'passcodeInput'
                 ).value = '';
 
+                document.getElementById(
+                    'passcodeInput'
+                ).focus();
+
             }
 
         }
 
 
         // =========================================================
-        // ALLOW ENTER KEY FOR PASSCODE
+        // ENTER / ESCAPE FOR PASSCODE
         // =========================================================
 
         document
             .getElementById('passcodeInput')
-            .addEventListener('keydown', function(event) {
+            .addEventListener(
+                'keydown',
+                function(event) {
 
-                if (event.key === 'Enter') {
+                    if (event.key === 'Enter') {
 
-                    verifyPasscode();
+                        event.preventDefault();
+
+                        verifyPasscode();
+
+                    }
+
+                    if (event.key === 'Escape') {
+
+                        event.preventDefault();
+
+                        closePasscodeModal();
+
+                    }
 
                 }
-
-                if (event.key === 'Escape') {
-
-                    closePasscodeModal();
-
-                }
-
-            });
+            );
 
 
         // =========================================================
-        // SCAN FOR DOORS
+        // AUTOMATICALLY FIND PREVIOUSLY AUTHORIZED DOORS
+        // =========================================================
+        //
+        // This is the important new function.
+        //
+        // navigator.bluetooth.getDevices() returns Bluetooth
+        // devices that this website has previously been granted
+        // permission to use.
+        //
+        // This does NOT open the Bluetooth picker.
+        //
+        // It allows the page to automatically try to reconnect
+        // to doors that were previously authorized.
+        //
         // =========================================================
 
-        async function scanDoors() {
+        async function autoReconnectToAuthorizedDoor() {
 
-            /*
-             * Web Bluetooth requires a user gesture.
-             *
-             * The page automatically opens to this scan screen,
-             * but the actual Bluetooth chooser must be started
-             * by pressing SCAN DOORS.
-             */
+            if (automaticScanRunning) {
+
+                return;
+
+            }
+
+
+            automaticScanRunning = true;
+
+            showScanScreen();
+
+            setScanMessage(
+                'LOOKING FOR AUTHORIZED DOORS...'
+            );
+
+            showStatus(
+                'Checking for previously authorized doors...'
+            );
+
+
+            try {
+
+                // =================================================
+                // WEB BLUETOOTH SUPPORT CHECK
+                // =================================================
+
+                if (!navigator.bluetooth) {
+
+                    throw new Error(
+                        'Web Bluetooth is not supported by this browser.'
+                    );
+
+                }
+
+
+                // =================================================
+                // GET PREVIOUSLY AUTHORIZED DEVICES
+                // =================================================
+
+                const devices =
+                    await navigator.bluetooth.getDevices();
+
+
+                console.log(
+                    'Previously authorized Bluetooth devices:',
+                    devices
+                );
+
+
+                // =================================================
+                // KEEP ONLY D1-D99
+                // =================================================
+
+                const doors =
+                    devices.filter(
+                        device =>
+                            isValidDoorName(device.name)
+                    );
+
+
+                // =================================================
+                // NO AUTHORIZED DOORS
+                // =================================================
+
+                if (doors.length === 0) {
+
+                    setScanMessage(
+                        'NO AUTHORIZED DOORS FOUND — USE SCAN / ADD DOOR ONCE'
+                    );
+
+                    showStatus(
+                        'No previously authorized doors found.'
+                    );
+
+                    automaticScanRunning = false;
+
+                    return;
+
+                }
+
+
+                // =================================================
+                // TRY EACH AUTHORIZED DOOR
+                // =================================================
+                //
+                // We try the doors one at a time.
+                //
+                // If a door is powered off or out of range,
+                // the next authorized door will be tried.
+                //
+                // =================================================
+
+                for (const device of doors) {
+
+                    if (connectedDoor) {
+
+                        break;
+
+                    }
+
+
+                    try {
+
+                        setScanMessage(
+                            `LOOKING FOR ${device.name}...`
+                        );
+
+                        showStatus(
+                            `Trying to reconnect to ${device.name}...`
+                        );
+
+
+                        await connectToDoor(
+                            device,
+                            true
+                        );
+
+
+                        // If connection succeeded,
+                        // connectToDoor sets connectedDoor.
+
+                        if (connectedDoor) {
+
+                            break;
+
+                        }
+
+                    }
+                    catch (err) {
+
+                        console.warn(
+                            `Could not connect to ${device.name}:`,
+                            err
+                        );
+
+                    }
+
+                }
+
+
+                // =================================================
+                // NOTHING CONNECTED
+                // =================================================
+
+                if (!connectedDoor) {
+
+                    setScanMessage(
+                        'AUTHORIZED DOORS NOT AVAILABLE'
+                    );
+
+                    showStatus(
+                        'No authorized doors are currently available.',
+                        true
+                    );
+
+                }
+
+            }
+            catch (err) {
+
+                console.error(
+                    'Automatic Bluetooth scan failed:',
+                    err
+                );
+
+
+                setScanMessage(
+                    'AUTOMATIC SCAN NOT AVAILABLE'
+                );
+
+                showStatus(
+                    err.message ||
+                    'Automatic Bluetooth scan failed.',
+                    true
+                );
+
+            }
+
+
+            automaticScanRunning = false;
+
+        }
+
+
+        // =========================================================
+        // MANUAL SCAN / ADD NEW DOOR
+        // =========================================================
+        //
+        // This function still requires the user to press the
+        // button because browsers require a user gesture before
+        // showing the Bluetooth device picker.
+        //
+        // Once the door is authorized, future page loads can
+        // automatically find it with getDevices().
+        //
+        // =========================================================
+
+        async function manualScanDoors() {
 
             if (!navigator.bluetooth) {
 
@@ -627,14 +901,13 @@
 
             try {
 
-                showStatus(
-                    'Scanning for doors...'
+                setScanMessage(
+                    'SELECT A DOOR FROM THE BLUETOOTH LIST'
                 );
 
-                document.getElementById(
-                    'scanMessage'
-                ).textContent =
-                    'SELECT A DOOR FROM THE BLUETOOTH LIST';
+                showStatus(
+                    'Opening Bluetooth door list...'
+                );
 
 
                 const device =
@@ -654,24 +927,19 @@
 
 
                 // =================================================
-                // MAKE SURE IT IS A VALID DOOR
+                // VERIFY DOOR NAME
                 // =================================================
 
-                if (
-                    !/^D([1-9]|[1-9][0-9])$/.test(
-                        device.name
-                    )
-                ) {
+                if (!isValidDoorName(device.name)) {
 
                     showStatus(
-                        'Only D1-D99 doors supported',
+                        'Only D1-D99 doors are supported.',
                         true
                     );
 
-                    document.getElementById(
-                        'scanMessage'
-                    ).textContent =
-                        'READY TO SCAN FOR DOORS';
+                    setScanMessage(
+                        'READY — USE SCAN / ADD DOOR'
+                    );
 
                     return;
 
@@ -679,7 +947,7 @@
 
 
                 // =================================================
-                // CHECK PASSCODE
+                // PASSCODE CHECK
                 // =================================================
 
                 const passcode =
@@ -690,12 +958,17 @@
 
                 if (passcode === null) {
 
-                    await connectToDoor(device);
+                    await connectToDoor(
+                        device,
+                        false
+                    );
 
                 }
                 else {
 
-                    showPasscodeModal(device);
+                    showPasscodeModal(
+                        device
+                    );
 
                 }
 
@@ -703,20 +976,24 @@
             catch (err) {
 
                 console.error(
-                    'Bluetooth scan error:',
+                    'Manual Bluetooth scan error:',
                     err
                 );
 
 
-                if (err.name === 'NotFoundError') {
+                if (
+                    err.name === 'NotFoundError'
+                ) {
 
                     showStatus(
-                        'No Bluetooth door selected',
+                        'No Bluetooth door was selected.',
                         true
                     );
 
                 }
-                else if (err.name === 'NotAllowedError') {
+                else if (
+                    err.name === 'NotAllowedError'
+                ) {
 
                     showStatus(
                         'Bluetooth access was cancelled or blocked.',
@@ -734,10 +1011,9 @@
                 }
 
 
-                document.getElementById(
-                    'scanMessage'
-                ).textContent =
-                    'READY TO SCAN FOR DOORS';
+                setScanMessage(
+                    'READY — USE SCAN / ADD DOOR'
+                );
 
             }
 
@@ -747,13 +1023,38 @@
         // =========================================================
         // CONNECT TO DOOR
         // =========================================================
+        //
+        // automaticConnection = true means this was attempted
+        // automatically from getDevices().
+        //
+        // automaticConnection = false means the user selected
+        // the door from the Bluetooth picker.
+        //
+        // =========================================================
 
-        async function connectToDoor(device) {
+        async function connectToDoor(
+            device,
+            automaticConnection = false
+        ) {
 
             try {
 
+                if (!device) {
+
+                    throw new Error(
+                        'No Bluetooth device was supplied.'
+                    );
+
+                }
+
+
                 showStatus(
                     `Connecting to ${device.name}...`
+                );
+
+
+                setScanMessage(
+                    `CONNECTING TO ${device.name}...`
                 );
 
 
@@ -763,13 +1064,35 @@
 
                 if (
                     currentDevice &&
+                    currentDevice !== device &&
                     currentDevice.gatt &&
                     currentDevice.gatt.connected
                 ) {
 
-                    await currentDevice.gatt.disconnect();
+                    try {
+
+                        await currentDevice.gatt.disconnect();
+
+                    }
+                    catch (disconnectError) {
+
+                        console.warn(
+                            'Previous device disconnect error:',
+                            disconnectError
+                        );
+
+                    }
 
                 }
+
+
+                // =================================================
+                // CLEAR OLD CONNECTION
+                // =================================================
+
+                currentCharacteristic = null;
+
+                connectedDoor = null;
 
 
                 // =================================================
@@ -782,6 +1105,17 @@
                 // =================================================
                 // CONNECT TO GATT
                 // =================================================
+
+                if (
+                    !currentDevice.gatt
+                ) {
+
+                    throw new Error(
+                        'Bluetooth GATT is not available for this device.'
+                    );
+
+                }
+
 
                 const server =
                     await currentDevice.gatt.connect();
@@ -798,7 +1132,7 @@
 
 
                 // =================================================
-                // GET CHARACTERISTIC
+                // GET UART CHARACTERISTIC
                 // =================================================
 
                 currentCharacteristic =
@@ -808,16 +1142,12 @@
 
 
                 // =================================================
-                // SAVE DOOR NAME
+                // SAVE CONNECTED DOOR
                 // =================================================
 
                 connectedDoor =
                     device.name;
 
-
-                // =================================================
-                // UPDATE DISPLAY
-                // =================================================
 
                 updateUI();
 
@@ -827,15 +1157,20 @@
                 );
 
 
+                setScanMessage(
+                    `CONNECTED TO ${connectedDoor}`
+                );
+
+
                 // =================================================
-                // SHOW OPERATIONS SCREEN
+                // SHOW OPERATIONS
                 // =================================================
 
                 showControlScreen();
 
 
                 // =================================================
-                // WATCH FOR DISCONNECT
+                // INSTALL DISCONNECT HANDLER
                 // =================================================
 
                 currentDevice.addEventListener(
@@ -843,26 +1178,52 @@
                     handleDisconnected
                 );
 
+
+                return true;
+
             }
             catch (err) {
 
                 console.error(
-                    'Connection failed:',
+                    `Connection failed for ${device?.name}:`,
                     err
                 );
+
+
+                currentCharacteristic = null;
+
+                connectedDoor = null;
+
+
+                if (
+                    automaticConnection
+                ) {
+
+                    /*
+                     * Automatic reconnect attempts are allowed
+                     * to fail quietly so the next authorized
+                     * door can be tried.
+                     */
+
+                    showScanScreen();
+
+                    return false;
+
+                }
+
 
                 showStatus(
                     `Connection failed: ${err.message}`,
                     true
                 );
 
-                connectedDoor = null;
-
-                currentCharacteristic = null;
-
-                updateUI();
+                setScanMessage(
+                    'CONNECTION FAILED — READY TO SCAN'
+                );
 
                 showScanScreen();
+
+                return false;
 
             }
 
@@ -875,23 +1236,74 @@
 
         function handleDisconnected() {
 
+            if (disconnectingManually) {
+
+                return;
+
+            }
+
+
             connectedDoor = null;
 
             currentCharacteristic = null;
 
             updateUI();
 
+
             showStatus(
-                'Door disconnected',
+                'Door disconnected.',
                 true
             );
 
-            /*
-             * Automatically return to the scanning screen
-             * whenever the door connection is lost.
-             */
+
+            setScanMessage(
+                'DOOR DISCONNECTED — LOOKING FOR DOORS...'
+            );
+
 
             showScanScreen();
+
+
+            /*
+             * Try to reconnect automatically after a short delay.
+             *
+             * This is useful if a door temporarily loses power
+             * or Bluetooth connection.
+             */
+
+            scheduleAutomaticReconnect();
+
+        }
+
+
+        // =========================================================
+        // AUTOMATIC RECONNECT TIMER
+        // =========================================================
+
+        function scheduleAutomaticReconnect() {
+
+            if (reconnectTimer) {
+
+                clearTimeout(
+                    reconnectTimer
+                );
+
+            }
+
+
+            reconnectTimer =
+                setTimeout(
+                    function() {
+
+                        if (!connectedDoor) {
+
+                            autoReconnectToAuthorizedDoor();
+
+                        }
+
+                    },
+                    2000
+                );
 
         }
 
@@ -901,6 +1313,20 @@
         // =========================================================
 
         async function disconnect() {
+
+            disconnectingManually = true;
+
+
+            if (reconnectTimer) {
+
+                clearTimeout(
+                    reconnectTimer
+                );
+
+                reconnectTimer = null;
+
+            }
+
 
             try {
 
@@ -917,7 +1343,7 @@
             }
             catch (err) {
 
-                console.error(
+                console.warn(
                     'Disconnect error:',
                     err
                 );
@@ -943,11 +1369,33 @@
 
 
             showStatus(
-                'Ready to scan for another door'
+                'Disconnected. Ready to select another door.'
+            );
+
+
+            setScanMessage(
+                'READY — USE SCAN / ADD DOOR'
             );
 
 
             showScanScreen();
+
+
+            /*
+             * Do NOT automatically reconnect here.
+             *
+             * The operator specifically selected
+             * CHANGE DOOR / DISCONNECT.
+             */
+
+            setTimeout(
+                function() {
+
+                    disconnectingManually = false;
+
+                },
+                500
+            );
 
         }
 
@@ -961,7 +1409,7 @@
             if (!currentCharacteristic) {
 
                 showStatus(
-                    'Not connected to any door',
+                    'Not connected to any door.',
                     true
                 );
 
@@ -973,7 +1421,9 @@
             try {
 
                 const data =
-                    new TextEncoder().encode(command);
+                    new TextEncoder().encode(
+                        command
+                    );
 
 
                 await currentCharacteristic.writeValue(
@@ -992,6 +1442,7 @@
                     'Command failed:',
                     err
                 );
+
 
                 showStatus(
                     `Send failed: ${err.message}`,
@@ -1017,12 +1468,14 @@
 
             document.getElementById(
                 'doorStatusScan'
-            ).textContent = statusText;
+            ).textContent =
+                statusText;
 
 
             document.getElementById(
                 'doorStatusControl'
-            ).textContent = statusText;
+            ).textContent =
+                statusText;
 
         }
 
@@ -1037,7 +1490,9 @@
         ) {
 
             const statusDiv =
-                document.getElementById('status');
+                document.getElementById(
+                    'status'
+                );
 
 
             statusDiv.textContent =
@@ -1053,20 +1508,17 @@
 
 
         // =========================================================
-        // STARTUP
+        // PAGE STARTUP
         // =========================================================
         //
-        // IMPORTANT:
+        // EVERY TIME THE PAGE OPENS:
         //
-        // Every time the HTML page is opened/reloaded:
+        // 1. Reset the user interface.
+        // 2. Show the scanning screen.
+        // 3. Ask the browser for previously authorized doors.
+        // 4. Try to reconnect automatically.
         //
-        // 1. Any old screen state is cleared.
-        // 2. The connection variables are reset.
-        // 3. The SCAN DOORS screen is displayed.
-        // 4. The SCAN DOORS button receives focus.
-        //
-        // The Bluetooth chooser itself cannot be automatically
-        // opened by Chrome/Edge without a user interaction.
+        // There is NO Bluetooth picker at startup.
         //
         // =========================================================
 
@@ -1074,7 +1526,7 @@
             'load',
             function() {
 
-                // Reset connection state
+                // Reset variables.
 
                 currentDevice = null;
 
@@ -1084,65 +1536,65 @@
 
                 selectedDevice = null;
 
+                automaticScanRunning = false;
 
-                // Make absolutely sure the passcode window
-                // is closed when the page opens.
+                disconnectingManually = false;
+
+
+                if (reconnectTimer) {
+
+                    clearTimeout(
+                        reconnectTimer
+                    );
+
+                    reconnectTimer = null;
+
+                }
+
+
+                // Close passcode window.
 
                 document.getElementById(
                     'passcodeModal'
                 ).style.display = 'none';
 
 
-                // Always start at the scan screen.
+                // Always start on scan screen.
 
-                document.getElementById(
-                    'scanScreen'
-                ).style.display = 'flex';
+                showScanScreen();
 
 
-                document.getElementById(
-                    'controlScreen'
-                ).style.display = 'none';
+                // Reset message.
 
-
-                // Reset scan message.
-
-                document.getElementById(
-                    'scanMessage'
-                ).textContent =
-                    'READY TO SCAN FOR DOORS';
-
-
-                // Reset status.
-
-                showStatus(
-                    'Ready to scan for doors'
+                setScanMessage(
+                    'LOOKING FOR AUTHORIZED DOORS...'
                 );
 
 
-                // Update door information.
+                showStatus(
+                    'Starting automatic door search...'
+                );
+
 
                 updateUI();
 
 
-                // Put focus on SCAN DOORS.
+                // =================================================
+                // START AUTOMATIC SEARCH
+                // =================================================
+
+                /*
+                 * Give the page a moment to finish loading before
+                 * asking Web Bluetooth for authorized devices.
+                 */
 
                 setTimeout(
                     function() {
 
-                        const scanButton =
-                            document.getElementById(
-                                'scanBtn'
-                            );
-
-                        if (scanButton) {
-
-                            scanButton.focus();
-
-                        }
+                        autoReconnectToAuthorizedDoor();
 
                     },
-                    150
+                    300
                 );
 
             }
